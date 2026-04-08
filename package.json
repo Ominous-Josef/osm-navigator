@@ -1,0 +1,8 @@
+{
+  "name": "osm-navigator",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ]
+}
