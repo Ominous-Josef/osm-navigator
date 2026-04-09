@@ -1,8 +1,20 @@
 {
-  "name": "osm-navigator",
+  "name": "osm-navigator-monorepo",
   "private": true,
+  "version": "0.0.1",
   "workspaces": [
     "packages/*",
     "apps/*"
-  ]
+  ],
+  "scripts": {
+    "build": "yarn workspaces foreach -pt run build",
+    "typecheck": "yarn workspaces foreach -pt run typecheck",
+    "lint": "eslint . --ext .ts,.tsx"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0"
+  }
 }

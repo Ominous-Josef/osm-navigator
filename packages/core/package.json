@@ -1,12 +1,10 @@
 {
   "name": "@osm-navigator/core",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist"],
-  "license": "MIT",
   "scripts": {
-    "build": "tsc -b",
-    "clean": "rimraf dist"
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit"
   }
 }
