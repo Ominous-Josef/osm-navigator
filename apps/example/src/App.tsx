@@ -1,53 +1,76 @@
-import { initOSMNavigator } from "@osm-navigator/core";
-import { MapView, MapViewRef } from "@osm-navigator/native-map";
-import { ManeuverIcon, RouteProgressBar, TurnByTurnOverlay } from "@osm-navigator/ui-navigation";
-import { useRef, useState } from "react";
-import { Button, StyleSheet, View } from "react-native";
+import type { LngLat } from "@osm-navigator/core";
+import { fetchRoute, initOSMNavigator } from "@osm-navigator/core";
+import type { CameraState, MapViewRef } from "@osm-navigator/native-map";
+import { MapView } from "@osm-navigator/native-map";
+import type { NavigationState } from "@osm-navigator/ui-navigation";
+import { TurnByTurnOverlay } from "@osm-navigator/ui-navigation";
+import React, { useCallback, useRef, useState } from "react";
+import { ActivityIndicator, Alert, StyleSheet, View } from "react-native";
 
-const osm = initOSMNavigator();
+// Initialize once at module level
+initOSMNavigator();
+
+const INITIAL_CAMERA: CameraState = {
+  latitude: 52.5,
+  longitude: 13.4,
+  zoom: 12,
+};
 
 export default function App() {
   const mapRef = useRef<MapViewRef>(null);
-  const [route, setRoute] = useState<any>(null);
-  const [progress, setProgress] = useState(0);
+  const [navState, setNavState] = useState<NavigationState | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  async function handleRoute() {
-    const res = await osm.valhalla.route({
-      locations: [
-        { lat: 52.5, lon: 13.4 },
-        { lat: 52.6, lon: 13.5 },
-      ],
-      costing: "auto",
-    });
-    setRoute(res.trip);
-    setProgress(0);
-  }
+  const handleLongPress = useCallback(async (coords: LngLat) => {
+    setLoading(true);
+    try {
+      const origin: LngLat = [13.4, 52.5];
+      const result = await fetchRoute({
+        origin,
+        destination: coords,
+        costing: "pedestrian",
+      });
+      setNavState({
+        route: result,
+        currentStepIndex: 0,
+        distanceToNextStepMeters: result.steps[0]?.distance ?? 0,
+        timeRemainingSeconds: result.durationSeconds,
+        isArrived: false,
+      });
+      const lngs = result.geometry.map((c) => c[0]);
+      const lats = result.geometry.map((c) => c[1]);
+      mapRef.current?.fitBounds(
+        [Math.min(...lngs), Math.min(...lats)],
+        [Math.max(...lngs), Math.max(...lats)],
+        60,
+        800
+      );
+    } catch (err) {
+      Alert.alert("Routing error", String(err));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   return (
     <View style={styles.container}>
       <MapView
         ref={mapRef}
         style={styles.map}
-        initialRegion={{
-          latitude: 52.5,
-          longitude: 13.4,
-          latitudeDelta: 0.1,
-          longitudeDelta: 0.1,
-        }}
-        tileSourceUrl="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+        initialCamera={INITIAL_CAMERA}
+        onLongPress={handleLongPress}
+        onMapLoaded={() => console.log("[OSMNavigator] Map ready")}
       />
-      <Button title="Route" onPress={handleRoute} />
-      {route && (
-        <TurnByTurnOverlay
-          maneuvers={route.legs?.[0]?.maneuvers?.map((m: any) => ({
-            instruction: m.instruction,
-            distance: m.length,
-            icon: <ManeuverIcon type={m.type} />,
-          })) || []}
-          currentStep={0}
-        />
+      {loading && (
+        <View style={styles.loader}>
+          <ActivityIndicator size="large" color="#1976D2" />
+        </View>
       )}
-      <RouteProgressBar progress={progress} />
+      <TurnByTurnOverlay
+        navigationState={navState}
+        units="metric"
+        onClose={() => setNavState(null)}
+      />
     </View>
   );
 }
@@ -55,4 +78,10 @@ export default function App() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
+  loader: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.5)",
+  },
 });

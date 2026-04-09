@@ -1,2 +1,2 @@
-import * as nativeMap from "./src";
-export = nativeMap;
+export * from "./src";
+

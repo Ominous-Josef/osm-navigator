@@ -1,2 +1,2 @@
-import * as uiNavigation from "./src";
-export = uiNavigation;
+export * from "./src";
+

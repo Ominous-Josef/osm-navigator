@@ -4,9 +4,17 @@
     "slug": "osm-navigator-example",
     "version": "0.0.1",
     "sdkVersion": "51.0.0",
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "jsEngine": "hermes",
-    "plugins": ["../../app.plugin.js"],
-    "extra": {}
+    "plugins": [
+      "../../app.plugin.js"
+    ],
+    "extra": {},
+    "android": {
+      "package": "com.jossyjones.osmnavigatorexample"
+    }
   }
 }
