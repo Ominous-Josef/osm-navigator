@@ -1,0 +1,7 @@
+# Monorepo workspace for osm-navigator
+
+This directory contains the open-source mapping and navigation SDK for React Native and Expo.
+
+- All packages are in /packages
+- Example app is in /apps/example
+- See root README.md for details
