@@ -1,27 +1,83 @@
-// PhotonClient.ts
-// Geocoding client for Photon REST API
+import { getConfig } from "../config";
+import type {
+  GeocodeRequest,
+  GeocodeResult,
+  ReverseGeocodeRequest,
+  PhotonFeature,
+  PhotonResponse,
+} from "./types";
 
-import { PhotonSearchRequest, PhotonSearchResponse } from "../types/photon";
-
-export interface PhotonClientOptions {
-	endpoint?: string; // Optional custom endpoint
+function formatAddress(props: PhotonFeature["properties"]): string {
+  const parts: string[] = [];
+  if (props.housenumber && props.street) {
+    parts.push(`${props.housenumber} ${props.street}`);
+  } else if (props.street) {
+    parts.push(props.street);
+  }
+  if (props.city) parts.push(props.city);
+  if (props.state) parts.push(props.state);
+  if (props.country) parts.push(props.country);
+  return parts.join(", ");
 }
 
-export class PhotonClient {
-	private endpoint: string;
+function featureToResult(feature: PhotonFeature): GeocodeResult {
+  const props = feature.properties;
+  return {
+    name: props.name ?? props.street ?? "Unknown",
+    address: formatAddress(props),
+    coordinates: feature.geometry.coordinates,
+    type: props.type ?? props.osm_type ?? "place",
+    raw: feature,
+  };
+}
 
-	constructor(options: PhotonClientOptions = {}) {
-		this.endpoint = options.endpoint || "https://photon.komoot.io/api";
-	}
+/**
+ * Forward geocode: text query → coordinates.
+ */
+export async function geocode(request: GeocodeRequest): Promise<GeocodeResult[]> {
+  const { photonEndpoint } = getConfig();
+  const { query, limit = 5, locationBias } = request;
 
-	async search(request: PhotonSearchRequest): Promise<PhotonSearchResponse> {
-		try {
-			const params = new URLSearchParams(request as any).toString();
-			const res = await fetch(`${this.endpoint}/?${params}`);
-			if (!res.ok) throw new Error(`Photon error: ${res.status}`);
-			return await res.json();
-		} catch (err) {
-			throw new Error(`PhotonClient.search failed: ${err instanceof Error ? err.message : String(err)}`);
-		}
-	}
+  const params = new URLSearchParams({ q: query, limit: String(limit) });
+
+  if (locationBias) {
+    params.set("lon", String(locationBias[0]));
+    params.set("lat", String(locationBias[1]));
+  }
+
+  const url = `${photonEndpoint}/api?${params.toString()}`;
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`Photon geocode error ${response.status}`);
+  }
+
+  const data = (await response.json()) as PhotonResponse;
+  return data.features.map(featureToResult);
+}
+
+/**
+ * Reverse geocode: coordinates → place name/address.
+ */
+export async function reverseGeocode(
+  request: ReverseGeocodeRequest
+): Promise<GeocodeResult[]> {
+  const { photonEndpoint } = getConfig();
+  const { coordinates, limit = 1 } = request;
+
+  const params = new URLSearchParams({
+    lon: String(coordinates[0]),
+    lat: String(coordinates[1]),
+    limit: String(limit),
+  });
+
+  const url = `${photonEndpoint}/reverse?${params.toString()}`;
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`Photon reverse geocode error ${response.status}`);
+  }
+
+  const data = (await response.json()) as PhotonResponse;
+  return data.features.map(featureToResult);
 }

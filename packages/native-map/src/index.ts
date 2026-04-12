@@ -1,2 +1,2 @@
-export * from "./components/MapView";
-
+export * from "./MapView";
+export * from "./types";

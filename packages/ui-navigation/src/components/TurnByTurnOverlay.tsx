@@ -1,26 +1,24 @@
 // TurnByTurnOverlay.tsx
 // Overlay UI for turn-by-turn navigation
 
-import type { ReactNode } from "react";
 import { StyleSheet, Text, View, ViewProps } from "react-native";
+import type { NavigationState } from "../types";
 
 export interface TurnByTurnOverlayProps extends ViewProps {
-  maneuvers: Array<{
-    instruction: string;
-    distance: number;
-    icon?: ReactNode;
-  }>;
-  currentStep: number;
+  navigationState: NavigationState | null;
+  units?: "metric" | "imperial";
+  onClose?: () => void;
 }
 
-export function TurnByTurnOverlay({ maneuvers, currentStep, style, ...rest }: TurnByTurnOverlayProps) {
+export function TurnByTurnOverlay({ navigationState, style, ...rest }: TurnByTurnOverlayProps) {
+  if (!navigationState) return null;
+  const { route, currentStepIndex } = navigationState;
   return (
     <View style={[styles.container, style]} {...rest}>
-      {maneuvers.map((m, i) => (
-        <View key={i} style={i === currentStep ? styles.current : styles.step}>
-          {m.icon}
-          <Text>{m.instruction}</Text>
-          <Text>{m.distance} m</Text>
+      {route.steps.map((step, i) => (
+        <View key={i} style={i === currentStepIndex ? styles.current : styles.step}>
+          <Text>{step.instruction}</Text>
+          <Text>{step.distance} m</Text>
         </View>
       ))}
     </View>

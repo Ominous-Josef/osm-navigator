@@ -1,4 +1,8 @@
-export * from "./types";
-export { ValhallaClient } from "./ValhallaClient";
-export type { ValhallaClientOptions } from "./ValhallaClient";
-
+export { fetchRoute } from "./ValhallaClient";
+export type {
+  RouteRequest,
+  Route,
+  RouteStep,
+  LngLat,
+  CostingModel,
+} from "./types";

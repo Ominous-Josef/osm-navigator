@@ -1,8 +1,25 @@
 {
   "name": "@osm-navigator/native-map",
   "version": "0.1.0",
+  "description": "Native MapLibre wrapper for OSM Navigator",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "expo": {
+    "name": "OSMNavigator",
+    "slug": "osm-navigator-native-map"
+  },
+  "keywords": [
+    "expo",
+    "react-native",
+    "maplibre",
+    "osm",
+    "navigation"
+  ],
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit"

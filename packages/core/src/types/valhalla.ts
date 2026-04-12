@@ -12,3 +12,16 @@ export interface ValhallaRouteResponse {
   trip: object;
   [key: string]: unknown;
 }
+
+// Canonical Route type for SDK consumers
+export interface Route {
+  geometry: [number, number][];
+  steps: Array<{
+    instruction: string;
+    distance: number;
+    duration: number;
+    maneuverType: string;
+  }>;
+  durationSeconds: number;
+  distanceMeters: number;
+}

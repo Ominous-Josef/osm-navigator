@@ -1,5 +1,3 @@
-export * from "./clients/PhotonClient";
-export * from "./clients/ValhallaClient";
-export * from "./initOSMNavigator";
-export * from "./types/locations";
-
+export * from "./config";
+export * from "./routing";
+export * from "./geocoding";

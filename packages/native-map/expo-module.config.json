@@ -1,9 +1,9 @@
 {
-  "name": "@osm-navigator/native-map",
-  "android": {
-    "modules": ["OSMNavigatorMapView"]
-  },
+  "platforms": ["ios", "android"],
   "ios": {
-    "modules": ["OSMNavigatorMapView"]
+    "modules": ["OSMNavigatorModule"]
+  },
+  "android": {
+    "modules": ["com.osmnavigator.OSMNavigatorModule"]
   }
 }

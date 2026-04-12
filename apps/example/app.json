@@ -4,13 +4,15 @@
     "slug": "osm-navigator-example",
     "version": "0.0.1",
     "sdkVersion": "51.0.0",
+    "scheme": "osm-navigator-example",
     "platforms": [
       "ios",
       "android"
     ],
     "jsEngine": "hermes",
     "plugins": [
-      "../../app.plugin.js"
+      "../../app.plugin.js",
+      "expo-router"
     ],
     "extra": {},
     "android": {

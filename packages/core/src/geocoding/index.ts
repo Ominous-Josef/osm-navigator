@@ -1,4 +1,6 @@
-export { PhotonClient } from "./PhotonClient";
-export type { PhotonClientOptions } from "./PhotonClient";
-export * from "./types";
-
+export { geocode, reverseGeocode } from "./PhotonClient";
+export type {
+  GeocodeRequest,
+  GeocodeResult,
+  ReverseGeocodeRequest,
+} from "./types";
