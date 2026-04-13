@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "OSM Navigation Example",
+    "slug": "navigation-example",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.osmnavigator.navigationexample"
+    },
+    "android": {
+      "package": "com.osmnavigator.navigationexample"
+    },
+    "scheme": "osm-navigation-example",
+    "plugins": [
+      "../../app.plugin.js",
+      "expo-router"
+    ]
+  }
+}

@@ -1,43 +1,38 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  ActivityIndicator, 
-  Alert, 
-  TextInput, 
-  TouchableOpacity, 
+import { fetchRoute, geocode, GeocodeResult, Route } from '@osm-navigator/core';
+import { LngLat, MapView } from '@osm-navigator/native-map';
+import { ManeuverType, NavigationBanner } from '@osm-navigator/ui-navigation';
+import * as Location from 'expo-location';
+import * as Speech from 'expo-speech';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
   FlatList,
   Keyboard,
   Platform,
-  Dimensions
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import { MapView, LngLat } from '@osm-navigator/native-map';
-import { fetchRoute, geocode, reverseGeocode, GeocodeResult, Route } from '@osm-navigator/core';
-import { NavigationBanner, ManeuverType } from '@osm-navigator/ui-navigation';
-import * as Location from 'expo-location';
-import * as Speech from 'expo-speech';
 
-const { width } = Dimensions.get('window');
 const BERLIN_CENTER: LngLat = [13.4050, 52.5200];
 
 export default function App() {
-  const [startPoint, setStartPoint] = useState<LngLat | undefined>(BERLIN_CENTER);
   const [destination, setDestination] = useState<LngLat | undefined>(undefined);
   const [routeData, setRouteData] = useState<Route | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   
-  // Navigation State
+  // Navigation & Simulation State
   const [isNavigating, setIsNavigating] = useState(false);
-  const [simStep, setSimStep] = useState(0);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [simPos, setSimPos] = useState<LngLat | undefined>(undefined);
+  const [bearing, setBearing] = useState(0);
   const [isArrived, setIsArrived] = useState(false);
 
-  const [startQuery, setStartQuery] = useState('Berlin Center');
   const [destQuery, setDestQuery] = useState('');
   const [results, setResults] = useState<GeocodeResult[]>([]);
-  const [activeTarget, setActiveTarget] = useState<'start' | 'dest' | null>(null);
   const [showUserLocation, setShowUserLocation] = useState(false);
 
   // Initial location permission check
@@ -46,27 +41,12 @@ export default function App() {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === 'granted') {
         setShowUserLocation(true);
-        // Automatically try to use current location as start
-        useCurrentLocation();
       }
     })();
   }, []);
 
-  const useCurrentLocation = async () => {
-    try {
-      const location = await Location.getCurrentPositionAsync({});
-      const coords: LngLat = [location.coords.longitude, location.coords.latitude];
-      setStartPoint(coords);
-      setStartQuery('Your Location');
-    } catch (e) {
-      console.log('Location error', e);
-    }
-  };
-
-  const searchLocations = async (q: string, target: 'start' | 'dest') => {
-    if (target === 'start') setStartQuery(q);
-    else setDestQuery(q);
-    
+  const searchLocations = async (q: string) => {
+    setDestQuery(q);
     if (q.length < 3) {
       setResults([]);
       return;
@@ -75,46 +55,30 @@ export default function App() {
     try {
       const res = await geocode({ query: q, limit: 5 });
       setResults(res);
-      setActiveTarget(target);
     } catch (e) {
       console.error(e);
     }
   };
 
   const selectResult = (item: GeocodeResult) => {
-    if (activeTarget === 'start') {
-      setStartPoint(item.coordinates);
-      setStartQuery(item.name);
-    } else {
-      setDestination(item.coordinates);
-      setDestQuery(item.name);
-    }
+    setDestination(item.coordinates);
+    setDestQuery(item.name);
     setResults([]);
-    setActiveTarget(null);
     Keyboard.dismiss();
   };
 
-  const calculateRoute = useCallback(async () => {
-    if (!startPoint || !destination) return;
-    
-    try {
-      setLoading(true);
-      const result = await fetchRoute({
-        origin: startPoint,
-        destination: destination,
-        costing: 'auto',
-      });
-      setRouteData(result);
-    } catch (error: any) {
-      Alert.alert('Routing Error', error.message || 'Failed to fetch route');
-    } finally {
-      setLoading(false);
-    }
-  }, [startPoint, destination]);
+  const calculateBearing = (start: LngLat, end: LngLat) => {
+    const lat1 = (start[1] * Math.PI) / 180;
+    const lat2 = (end[1] * Math.PI) / 180;
+    const lon1 = (start[0] * Math.PI) / 180;
+    const lon2 = (end[0] * Math.PI) / 180;
 
-  useEffect(() => {
-    calculateRoute();
-  }, [startPoint, destination]);
+    const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
+    const θ = Math.atan2(y, x);
+    const brng = ((θ * 180) / Math.PI + 360) % 360; // in degrees
+    return brng;
+  };
 
   // Simulation Engine
   useEffect(() => {
@@ -122,24 +86,30 @@ export default function App() {
     if (isNavigating && routeData) {
       setIsArrived(false);
       interval = setInterval(() => {
-        setSimStep((prev) => {
-          const nextStep = prev + 1;
-          if (nextStep >= routeData.geometry.length) {
+        setSimPos((current) => {
+          if (!current) return routeData.geometry[0];
+          
+          const currentIndex = routeData.geometry.findIndex(g => g === current);
+          const nextIndex = currentIndex + 1;
+          
+          if (nextIndex >= routeData.geometry.length) {
             clearInterval(interval);
             setIsArrived(true);
             Speech.speak('You have arrived at your destination.');
-            return prev;
+            return current;
           }
 
-          const currentPos = routeData.geometry[nextStep];
-          setSimPos(currentPos);
+          const nextPos = routeData.geometry[nextIndex];
+
+          // Calculate bearing for driver mode
+          const newBearing = calculateBearing(current, nextPos);
+          setBearing(newBearing);
 
           // Find current maneuver step
           const currentManeuver = routeData.steps.findIndex((s, i) => {
             const nextManeuver = routeData.steps[i+1];
-            if (!nextManeuver) return true; // Final step
-            // Approximate check if we've passed this maneuver in the geometry
-            return nextStep < routeData.geometry.findIndex(g => g === nextManeuver.startLocation);
+            if (!nextManeuver) return true;
+            return nextIndex < routeData.geometry.findIndex(g => g === nextManeuver.startLocation);
           });
           
           if (currentManeuver !== currentStepIndex) {
@@ -148,9 +118,9 @@ export default function App() {
             if (instruction) Speech.speak(instruction);
           }
 
-          return nextStep;
+          return nextPos;
         });
-      }, 500); // 2 steps per second for "at work" simulation speed
+      }, 500); 
     }
     return () => clearInterval(interval);
   }, [isNavigating, routeData, currentStepIndex]);
@@ -160,7 +130,7 @@ export default function App() {
     
     try {
       setLoading(true);
-      // RE-CALCULATE FROM ACTUAL CURRENT LOCATION
+      // ALWAYS START FROM ACTUAL CURRENT LOCATION
       const location = await Location.getCurrentPositionAsync({});
       const currentPos: LngLat = [location.coords.longitude, location.coords.latitude];
       
@@ -171,9 +141,9 @@ export default function App() {
       });
       
       setRouteData(result);
-      setSimStep(0);
       setCurrentStepIndex(0);
       setSimPos(result.geometry[0]);
+      setBearing(0); // Reset bearing
       setIsNavigating(true);
       Speech.speak('Starting navigation to ' + destQuery);
     } catch (error: any) {
@@ -186,6 +156,7 @@ export default function App() {
   const stopNavigation = () => {
     setIsNavigating(false);
     setSimPos(undefined);
+    setBearing(0);
     setIsArrived(false);
     Speech.stop();
   };
@@ -207,6 +178,7 @@ export default function App() {
           longitude: simPos[0],
           zoom: 17,
           pitch: 60,
+          bearing: bearing, // Driver mode rotation
         } : undefined}
         onPress={(coords) => {
           if (isNavigating) return;
@@ -219,24 +191,12 @@ export default function App() {
 
       {!isNavigating ? (
         <View style={styles.searchPanel}>
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="From: Berlin Center"
-              value={startQuery}
-              onChangeText={(t) => searchLocations(t, 'start')}
-              onFocus={() => setActiveTarget('start')}
-            />
-          </View>
-
-          <View style={styles.divider} />
-
+          <Text style={styles.title}>OSM Navigation</Text>
           <TextInput
             style={styles.input}
-            placeholder="To: Select destination..."
+            placeholder="Search destination..."
             value={destQuery}
-            onChangeText={(t) => searchLocations(t, 'dest')}
-            onFocus={() => setActiveTarget('dest')}
+            onChangeText={searchLocations}
           />
 
           {results.length > 0 && (
@@ -254,7 +214,7 @@ export default function App() {
             </View>
           )}
 
-          {routeData && (
+          {destination && (
             <TouchableOpacity style={styles.navigateButton} onPress={startNavigation}>
               <Text style={styles.navigateButtonText}>Start Navigation</Text>
             </TouchableOpacity>
@@ -271,8 +231,8 @@ export default function App() {
           
           {isArrived && (
             <View style={styles.arrivalCard}>
-              <Text style={styles.arrivalTitle}>Destined Reached</Text>
-              <Text style={styles.arrivalText}>You have arrived at {destQuery}</Text>
+              <Text style={styles.arrivalTitle}>🏁 Destination Reached</Text>
+              <Text style={styles.arrivalText}>You have arrived at your chosen point.</Text>
             </View>
           )}
 
@@ -294,7 +254,7 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#000',
   },
   map: {
     ...StyleSheet.absoluteFillObject,
@@ -305,13 +265,20 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 12,
+    borderRadius: 20,
+    padding: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#000',
+    marginBottom: 12,
+    textAlign: 'center',
   },
   navigationOverlay: {
     position: 'absolute',
@@ -321,62 +288,51 @@ const styles = StyleSheet.create({
     bottom: 40,
     justifyContent: 'space-between',
   },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   input: {
-    flex: 1,
-    height: 48,
+    height: 52,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
     fontSize: 16,
     color: '#333',
-    paddingHorizontal: 10,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#eee',
-    marginVertical: 4,
+    paddingHorizontal: 16,
   },
   resultsContainer: {
-    maxHeight: 250,
+    maxHeight: 300,
     marginTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
   },
   resultItem: {
     paddingVertical: 12,
-    paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#f9f9f9',
+    borderBottomColor: '#f0f0f0',
   },
   resultName: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
     color: '#1a1a1a',
   },
   resultAddr: {
-    fontSize: 12,
-    color: '#888',
+    fontSize: 13,
+    color: '#666',
     marginTop: 2,
   },
   navigateButton: {
     backgroundColor: '#007bff',
-    borderRadius: 12,
-    height: 48,
+    borderRadius: 14,
+    height: 54,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 16,
   },
   navigateButtonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '800',
   },
   stopButton: {
-    backgroundColor: '#FF3B30',
-    borderRadius: 24,
-    height: 48,
-    width: 180,
+    backgroundColor: '#ff3b30',
+    borderRadius: 28,
+    height: 54,
+    width: 200,
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
@@ -388,34 +344,34 @@ const styles = StyleSheet.create({
   },
   stopButtonText: {
     color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
   },
   arrivalCard: {
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 20,
+    padding: 24,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 12,
   },
   arrivalTitle: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 22,
+    fontWeight: '900',
     color: '#1a1a1a',
   },
   arrivalText: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#666',
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: 10,
   },
   loaderContainer: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    backgroundColor: 'rgba(0,0,0,0.3)',
     justifyContent: 'center',
     alignItems: 'center',
   },
