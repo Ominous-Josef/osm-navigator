@@ -28,18 +28,57 @@ function safeSpeech(text: string): void {
   }
 }
 
+/** Calculate bearing between two points in degrees */
+function calculateBearing(start: LngLat, end: LngLat): number {
+  const lat1 = (start[1] * Math.PI) / 180;
+  const lat2 = (end[1] * Math.PI) / 180;
+  const lon1 = (start[0] * Math.PI) / 180;
+  const lon2 = (end[0] * Math.PI) / 180;
+
+  const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
+  const θ = Math.atan2(y, x);
+  return ((θ * 180) / Math.PI + 360) % 360;
+}
+
+/** Calculate distance between two coordinates in meters using Haversine */
+function haversineDistance(a: LngLat, b: LngLat): number {
+  const R = 6371000;
+  const dLat = ((b[1] - a[1]) * Math.PI) / 180;
+  const dLon = ((b[0] - a[0]) * Math.PI) / 180;
+  const lat1 = (a[1] * Math.PI) / 180;
+  const lat2 = (b[1] * Math.PI) / 180;
+
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+/** Find the nearest geometry index for a given position */
+function findNearestGeometryIndex(pos: LngLat, geometry: LngLat[]): number {
+  let minDist = Infinity;
+  let minIdx = 0;
+  for (let i = 0; i < geometry.length; i++) {
+    const d = haversineDistance(pos, geometry[i]);
+    if (d < minDist) {
+      minDist = d;
+      minIdx = i;
+    }
+  }
+  return minIdx;
+}
+
 export default function App() {
   const [destination, setDestination] = useState<LngLat | undefined>(undefined);
   const [routeData, setRouteData] = useState<Route | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   
-  // Navigation & Simulation State
+  // Navigation state
   const [isNavigating, setIsNavigating] = useState(false);
-  const [geometryIndex, setGeometryIndex] = useState(0);
+  const [userPosition, setUserPosition] = useState<LngLat | undefined>(undefined);
   const [bearing, setBearing] = useState(0);
   const [isArrived, setIsArrived] = useState(false);
 
-  // Use ref for currentStepIndex to avoid stale closures in the interval
+  // Use ref for currentStepIndex to avoid stale closures
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const stepIndexRef = useRef(0);
 
@@ -49,8 +88,10 @@ export default function App() {
   const [locationDenied, setLocationDenied] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
 
-  // Debounce timer ref
+  // Refs
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const locationSubRef = useRef<Location.LocationSubscription | null>(null);
+  const prevPositionRef = useRef<LngLat | undefined>(undefined);
 
   // Initial location permission check
   useEffect(() => {
@@ -79,7 +120,6 @@ export default function App() {
       return;
     }
 
-    // Debounce: clear previous timer
     if (searchTimerRef.current) {
       clearTimeout(searchTimerRef.current);
     }
@@ -87,7 +127,6 @@ export default function App() {
     searchTimerRef.current = setTimeout(async () => {
       try {
         const res = await geocode({ query: q, limit: 5 });
-        // Only update if the query hasn't changed since we started
         setResults(res);
       } catch (e) {
         console.error(e);
@@ -114,79 +153,75 @@ export default function App() {
     Keyboard.dismiss();
   };
 
-  const calculateBearing = (start: LngLat, end: LngLat) => {
-    const lat1 = (start[1] * Math.PI) / 180;
-    const lat2 = (end[1] * Math.PI) / 180;
-    const lon1 = (start[0] * Math.PI) / 180;
-    const lon2 = (end[0] * Math.PI) / 180;
-
-    const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
-    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
-    const θ = Math.atan2(y, x);
-    const brng = ((θ * 180) / Math.PI + 360) % 360; // in degrees
-    return brng;
-  };
-
-  // Simulation Engine — driven by geometryIndex advancement
+  // ─── Real GPS tracking during navigation ───────────────────────────
+  // When isNavigating flips to true, we subscribe to live GPS updates.
+  // Each update: move camera, update bearing, check maneuver progress.
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
+    if (!isNavigating || !routeData) return;
 
-    if (isNavigating && routeData) {
-      setIsArrived(false);
+    let sub: Location.LocationSubscription | null = null;
 
-      interval = setInterval(() => {
-        setGeometryIndex((prevIndex) => {
-          const nextIndex = prevIndex + 1;
+    (async () => {
+      sub = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.BestForNavigation,
+          timeInterval: 1000,   // at most once per second
+          distanceInterval: 5,  // or every 5 metres
+        },
+        (location) => {
+          const pos: LngLat = [location.coords.longitude, location.coords.latitude];
+          const prevPos = prevPositionRef.current;
 
-          if (nextIndex >= routeData.geometry.length) {
-            clearInterval(interval);
-            return prevIndex; // stay at last point
+          setUserPosition(pos);
+
+          // Calculate bearing from previous position
+          if (prevPos) {
+            const dist = haversineDistance(prevPos, pos);
+            if (dist > 2) { // Only update bearing if we've moved > 2m (avoids jitter)
+              setBearing(calculateBearing(prevPos, pos));
+            }
+          }
+          prevPositionRef.current = pos;
+
+          // Check arrival (within 30m of destination)
+          const destCoord = routeData.geometry[routeData.geometry.length - 1];
+          if (haversineDistance(pos, destCoord) < 30) {
+            setIsArrived(true);
+            safeSpeech('You have arrived at your destination.');
+            return;
           }
 
-          return nextIndex;
-        });
-      }, 500);
-    }
+          // Find nearest point on route to determine current maneuver
+          const nearestIdx = findNearestGeometryIndex(pos, routeData.geometry);
 
-    return () => clearInterval(interval);
-  }, [isNavigating, routeData]);
+          // Determine which step we're in
+          let newStepIndex = stepIndexRef.current;
+          for (let i = routeData.steps.length - 1; i >= 0; i--) {
+            const stepStart = routeData.geometry.indexOf(routeData.steps[i].startLocation);
+            if (stepStart !== -1 && nearestIdx >= stepStart) {
+              newStepIndex = i;
+              break;
+            }
+          }
 
-  // Side-effect reactor: update bearing, step index, and speech whenever geometryIndex changes
-  useEffect(() => {
-    if (!isNavigating || !routeData || geometryIndex <= 0) return;
+          if (newStepIndex !== stepIndexRef.current) {
+            setCurrentStepIndex(newStepIndex);
+            const instruction = routeData.steps[newStepIndex]?.instruction;
+            if (instruction) safeSpeech(instruction);
+          }
+        }
+      );
 
-    const currentPos = routeData.geometry[geometryIndex];
-    const prevPos = routeData.geometry[geometryIndex - 1];
+      locationSubRef.current = sub;
+    })();
 
-    if (!currentPos || !prevPos) return;
-
-    // Update bearing for driver-mode camera rotation
-    setBearing(calculateBearing(prevPos, currentPos));
-
-    // Check if we've arrived at the end
-    if (geometryIndex >= routeData.geometry.length - 1) {
-      setIsArrived(true);
-      safeSpeech('You have arrived at your destination.');
-      return;
-    }
-
-    // Determine which maneuver step we're on by comparing geometryIndex
-    // against the begin_shape_index of each step's startLocation
-    let newStepIndex = stepIndexRef.current;
-    for (let i = routeData.steps.length - 1; i >= 0; i--) {
-      const stepStart = routeData.geometry.indexOf(routeData.steps[i].startLocation);
-      if (stepStart !== -1 && geometryIndex >= stepStart) {
-        newStepIndex = i;
-        break;
+    return () => {
+      if (locationSubRef.current) {
+        locationSubRef.current.remove();
+        locationSubRef.current = null;
       }
-    }
-
-    if (newStepIndex !== stepIndexRef.current) {
-      setCurrentStepIndex(newStepIndex);
-      const instruction = routeData.steps[newStepIndex]?.instruction;
-      if (instruction) safeSpeech(instruction);
-    }
-  }, [geometryIndex, isNavigating, routeData]);
+    };
+  }, [isNavigating, routeData]);
 
   const startNavigation = async () => {
     if (!destination) return;
@@ -214,8 +249,10 @@ export default function App() {
       setRouteData(result);
       setCurrentStepIndex(0);
       stepIndexRef.current = 0;
-      setGeometryIndex(0);
+      setUserPosition(currentPos);
+      prevPositionRef.current = currentPos;
       setBearing(0);
+      setIsArrived(false);
       setIsNavigating(true);
       safeSpeech('Starting navigation to ' + destQuery);
     } catch (error: any) {
@@ -231,15 +268,24 @@ export default function App() {
 
   const stopNavigation = () => {
     setIsNavigating(false);
-    setGeometryIndex(0);
+    setUserPosition(undefined);
+    prevPositionRef.current = undefined;
     setBearing(0);
     setIsArrived(false);
     Speech.stop();
+    // Location subscription is cleaned up by the useEffect return
   };
 
   const currentStep = routeData?.steps[currentStepIndex];
   const nextStep = routeData?.steps[currentStepIndex + 1];
-  const simPos = routeData?.geometry[geometryIndex];
+
+  // Calculate remaining distance to next maneuver
+  const distanceToNextManeuver = (() => {
+    if (!userPosition || !routeData || !nextStep) return currentStep?.distance || 0;
+    const nextStepStart = nextStep.startLocation;
+    if (!nextStepStart) return currentStep?.distance || 0;
+    return haversineDistance(userPosition, nextStepStart);
+  })();
 
   return (
     <View style={styles.container}>
@@ -250,12 +296,12 @@ export default function App() {
           longitude: BERLIN_CENTER[0],
           zoom: 12,
         }}
-        camera={simPos ? {
-          latitude: simPos[1],
-          longitude: simPos[0],
+        camera={isNavigating && userPosition ? {
+          latitude: userPosition[1],
+          longitude: userPosition[0],
           zoom: 17,
           pitch: 60,
-          bearing: bearing, // Driver mode rotation
+          bearing: bearing,
         } : undefined}
         onPress={(coords) => {
           if (isNavigating) return;
@@ -268,7 +314,7 @@ export default function App() {
 
       {!isNavigating ? (
         <View style={styles.searchPanel}>
-          <Text style={styles.title}>OSM Navigation</Text>
+          <Text style={styles.title}>🧭 OSM Navigation</Text>
 
           {locationDenied && (
             <Text style={styles.warningText}>
@@ -278,7 +324,8 @@ export default function App() {
 
           <TextInput
             style={styles.input}
-            placeholder="Search destination..."
+            placeholder="Where do you want to go?"
+            placeholderTextColor="#999"
             value={destQuery}
             onChangeText={searchLocations}
           />
@@ -304,15 +351,15 @@ export default function App() {
 
           {destination && (
             <TouchableOpacity style={styles.navigateButton} onPress={startNavigation}>
-              <Text style={styles.navigateButtonText}>Start Navigation</Text>
+              <Text style={styles.navigateButtonText}>🚗 Start Navigation</Text>
             </TouchableOpacity>
           )}
         </View>
       ) : (
         <View style={styles.navigationOverlay}>
           <NavigationBanner
-            instruction={currentStep?.instruction || 'Drive straight'}
-            distanceToManeuver={currentStep?.distance || 0}
+            instruction={currentStep?.instruction || 'Follow the road'}
+            distanceToManeuver={Math.round(distanceToNextManeuver)}
             maneuverType={(currentStep?.maneuverType as ManeuverType) || 'straight'}
             nextInstruction={nextStep?.instruction}
           />
@@ -320,12 +367,12 @@ export default function App() {
           {isArrived && (
             <View style={styles.arrivalCard}>
               <Text style={styles.arrivalTitle}>🏁 Destination Reached</Text>
-              <Text style={styles.arrivalText}>You have arrived at your chosen point.</Text>
+              <Text style={styles.arrivalText}>You have arrived at your destination.</Text>
             </View>
           )}
 
           <TouchableOpacity style={styles.stopButton} onPress={stopNavigation}>
-            <Text style={styles.stopButtonText}>Exit Navigation</Text>
+            <Text style={styles.stopButtonText}>✕ Exit Navigation</Text>
           </TouchableOpacity>
         </View>
       )}
