@@ -3,7 +3,7 @@ import { LngLat, MapView } from '@osm-navigator/native-map';
 import { ManeuverType, NavigationBanner } from '@osm-navigator/ui-navigation';
 import * as Location from 'expo-location';
 import * as Speech from 'expo-speech';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -19,6 +19,15 @@ import {
 
 const BERLIN_CENTER: LngLat = [13.4050, 52.5200];
 
+/** Safe wrapper around Speech.speak — swallows errors from unavailable TTS engines. */
+function safeSpeech(text: string): void {
+  try {
+    Speech.speak(text);
+  } catch {
+    // TTS not available — silent fallback
+  }
+}
+
 export default function App() {
   const [destination, setDestination] = useState<LngLat | undefined>(undefined);
   const [routeData, setRouteData] = useState<Route | undefined>(undefined);
@@ -26,14 +35,22 @@ export default function App() {
   
   // Navigation & Simulation State
   const [isNavigating, setIsNavigating] = useState(false);
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [simPos, setSimPos] = useState<LngLat | undefined>(undefined);
+  const [geometryIndex, setGeometryIndex] = useState(0);
   const [bearing, setBearing] = useState(0);
   const [isArrived, setIsArrived] = useState(false);
+
+  // Use ref for currentStepIndex to avoid stale closures in the interval
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const stepIndexRef = useRef(0);
 
   const [destQuery, setDestQuery] = useState('');
   const [results, setResults] = useState<GeocodeResult[]>([]);
   const [showUserLocation, setShowUserLocation] = useState(false);
+  const [locationDenied, setLocationDenied] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+
+  // Debounce timer ref
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Initial location permission check
   useEffect(() => {
@@ -41,29 +58,59 @@ export default function App() {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === 'granted') {
         setShowUserLocation(true);
+        setLocationDenied(false);
+      } else {
+        setLocationDenied(true);
       }
     })();
   }, []);
 
-  const searchLocations = async (q: string) => {
+  // Keep stepIndexRef in sync
+  useEffect(() => {
+    stepIndexRef.current = currentStepIndex;
+  }, [currentStepIndex]);
+
+  const searchLocations = useCallback((q: string) => {
     setDestQuery(q);
+    setSearchError(null);
+
     if (q.length < 3) {
       setResults([]);
       return;
     }
 
-    try {
-      const res = await geocode({ query: q, limit: 5 });
-      setResults(res);
-    } catch (e) {
-      console.error(e);
+    // Debounce: clear previous timer
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
     }
-  };
+
+    searchTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await geocode({ query: q, limit: 5 });
+        // Only update if the query hasn't changed since we started
+        setResults(res);
+      } catch (e) {
+        console.error(e);
+        setSearchError('Search failed. Check your connection.');
+        setResults([]);
+      }
+    }, 300);
+  }, []);
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current);
+      }
+    };
+  }, []);
 
   const selectResult = (item: GeocodeResult) => {
     setDestination(item.coordinates);
     setDestQuery(item.name);
     setResults([]);
+    setSearchError(null);
     Keyboard.dismiss();
   };
 
@@ -80,57 +127,81 @@ export default function App() {
     return brng;
   };
 
-  // Simulation Engine
+  // Simulation Engine — driven by geometryIndex advancement
   useEffect(() => {
-    let interval: any;
+    let interval: ReturnType<typeof setInterval>;
+
     if (isNavigating && routeData) {
       setIsArrived(false);
+
       interval = setInterval(() => {
-        setSimPos((current) => {
-          if (!current) return routeData.geometry[0];
-          
-          const currentIndex = routeData.geometry.findIndex(g => g === current);
-          const nextIndex = currentIndex + 1;
-          
+        setGeometryIndex((prevIndex) => {
+          const nextIndex = prevIndex + 1;
+
           if (nextIndex >= routeData.geometry.length) {
             clearInterval(interval);
-            setIsArrived(true);
-            Speech.speak('You have arrived at your destination.');
-            return current;
+            return prevIndex; // stay at last point
           }
 
-          const nextPos = routeData.geometry[nextIndex];
-
-          // Calculate bearing for driver mode
-          const newBearing = calculateBearing(current, nextPos);
-          setBearing(newBearing);
-
-          // Find current maneuver step
-          const currentManeuver = routeData.steps.findIndex((s, i) => {
-            const nextManeuver = routeData.steps[i+1];
-            if (!nextManeuver) return true;
-            return nextIndex < routeData.geometry.findIndex(g => g === nextManeuver.startLocation);
-          });
-          
-          if (currentManeuver !== currentStepIndex) {
-            setCurrentStepIndex(currentManeuver);
-            const instruction = routeData.steps[currentManeuver]?.instruction;
-            if (instruction) Speech.speak(instruction);
-          }
-
-          return nextPos;
+          return nextIndex;
         });
-      }, 500); 
+      }, 500);
     }
+
     return () => clearInterval(interval);
-  }, [isNavigating, routeData, currentStepIndex]);
+  }, [isNavigating, routeData]);
+
+  // Side-effect reactor: update bearing, step index, and speech whenever geometryIndex changes
+  useEffect(() => {
+    if (!isNavigating || !routeData || geometryIndex <= 0) return;
+
+    const currentPos = routeData.geometry[geometryIndex];
+    const prevPos = routeData.geometry[geometryIndex - 1];
+
+    if (!currentPos || !prevPos) return;
+
+    // Update bearing for driver-mode camera rotation
+    setBearing(calculateBearing(prevPos, currentPos));
+
+    // Check if we've arrived at the end
+    if (geometryIndex >= routeData.geometry.length - 1) {
+      setIsArrived(true);
+      safeSpeech('You have arrived at your destination.');
+      return;
+    }
+
+    // Determine which maneuver step we're on by comparing geometryIndex
+    // against the begin_shape_index of each step's startLocation
+    let newStepIndex = stepIndexRef.current;
+    for (let i = routeData.steps.length - 1; i >= 0; i--) {
+      const stepStart = routeData.geometry.indexOf(routeData.steps[i].startLocation);
+      if (stepStart !== -1 && geometryIndex >= stepStart) {
+        newStepIndex = i;
+        break;
+      }
+    }
+
+    if (newStepIndex !== stepIndexRef.current) {
+      setCurrentStepIndex(newStepIndex);
+      const instruction = routeData.steps[newStepIndex]?.instruction;
+      if (instruction) safeSpeech(instruction);
+    }
+  }, [geometryIndex, isNavigating, routeData]);
 
   const startNavigation = async () => {
     if (!destination) return;
     
+    if (locationDenied) {
+      Alert.alert(
+        'Location Permission Required',
+        'Please enable location access in your device settings to start navigation.',
+      );
+      return;
+    }
+
     try {
       setLoading(true);
-      // ALWAYS START FROM ACTUAL CURRENT LOCATION
+      // Get actual current location
       const location = await Location.getCurrentPositionAsync({});
       const currentPos: LngLat = [location.coords.longitude, location.coords.latitude];
       
@@ -142,12 +213,17 @@ export default function App() {
       
       setRouteData(result);
       setCurrentStepIndex(0);
-      setSimPos(result.geometry[0]);
-      setBearing(0); // Reset bearing
+      stepIndexRef.current = 0;
+      setGeometryIndex(0);
+      setBearing(0);
       setIsNavigating(true);
-      Speech.speak('Starting navigation to ' + destQuery);
+      safeSpeech('Starting navigation to ' + destQuery);
     } catch (error: any) {
-      Alert.alert('Navigation Error', 'Could not determine your current location to start navigation.');
+      const message = error?.message || 'Unknown error';
+      Alert.alert(
+        'Navigation Error',
+        `Could not start navigation: ${message}`,
+      );
     } finally {
       setLoading(false);
     }
@@ -155,7 +231,7 @@ export default function App() {
 
   const stopNavigation = () => {
     setIsNavigating(false);
-    setSimPos(undefined);
+    setGeometryIndex(0);
     setBearing(0);
     setIsArrived(false);
     Speech.stop();
@@ -163,14 +239,15 @@ export default function App() {
 
   const currentStep = routeData?.steps[currentStepIndex];
   const nextStep = routeData?.steps[currentStepIndex + 1];
+  const simPos = routeData?.geometry[geometryIndex];
 
   return (
     <View style={styles.container}>
       <MapView
         style={styles.map}
         initialCamera={{
-          latitude: 52.5200,
-          longitude: 13.4050,
+          latitude: BERLIN_CENTER[1],
+          longitude: BERLIN_CENTER[0],
           zoom: 12,
         }}
         camera={simPos ? {
@@ -192,6 +269,13 @@ export default function App() {
       {!isNavigating ? (
         <View style={styles.searchPanel}>
           <Text style={styles.title}>OSM Navigation</Text>
+
+          {locationDenied && (
+            <Text style={styles.warningText}>
+              ⚠️ Location access denied. Navigation requires location permission.
+            </Text>
+          )}
+
           <TextInput
             style={styles.input}
             placeholder="Search destination..."
@@ -199,11 +283,15 @@ export default function App() {
             onChangeText={searchLocations}
           />
 
+          {searchError && (
+            <Text style={styles.errorText}>{searchError}</Text>
+          )}
+
           {results.length > 0 && (
             <View style={styles.resultsContainer}>
               <FlatList
                 data={results}
-                keyExtractor={(item, index) => index.toString()}
+                keyExtractor={(item, index) => `${item.name}-${index}`}
                 renderItem={({ item }) => (
                   <TouchableOpacity style={styles.resultItem} onPress={() => selectResult(item)}>
                     <Text style={styles.resultName}>{item.name}</Text>
@@ -374,5 +462,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.3)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  warningText: {
+    fontSize: 13,
+    color: '#e67e00',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  errorText: {
+    fontSize: 13,
+    color: '#ff3b30',
+    marginTop: 4,
   },
 });

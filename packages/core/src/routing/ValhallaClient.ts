@@ -51,6 +51,46 @@ function metersFromMiles(miles: number): number {
   return miles * 1609.344;
 }
 
+/**
+ * Map Valhalla integer maneuver types to human-readable string labels
+ * that match the ManeuverType union in @osm-navigator/ui-navigation.
+ *
+ * Reference: https://valhalla.github.io/valhalla/api/turn-by-turn/api-reference/#maneuver-types
+ */
+function mapValhallaManeuverType(type: number): string {
+  switch (type) {
+    case 0: return 'straight';       // kNone
+    case 1: return 'straight';       // kStart
+    case 2: return 'straight';       // kStartRight
+    case 3: return 'straight';       // kStartLeft
+    case 4: return 'arrive';         // kDestination
+    case 5: return 'arrive';         // kDestinationRight
+    case 6: return 'arrive';         // kDestinationLeft
+    case 7: return 'straight';       // kBecomes
+    case 8: return 'straight';       // kContinue
+    case 9: return 'slight-right';   // kSlightRight
+    case 10: return 'right';         // kRight
+    case 11: return 'right';         // kSharpRight
+    case 12: return 'u-turn';        // kUturnRight
+    case 13: return 'u-turn';        // kUturnLeft
+    case 14: return 'left';          // kSharpLeft
+    case 15: return 'left';          // kLeft
+    case 16: return 'slight-left';   // kSlightLeft
+    case 17: return 'straight';      // kRampStraight
+    case 18: return 'slight-right';  // kRampRight
+    case 19: return 'slight-left';   // kRampLeft
+    case 20: return 'straight';      // kExitRight
+    case 21: return 'straight';      // kExitLeft
+    case 22: return 'straight';      // kStayStraight
+    case 23: return 'slight-right';  // kStayRight
+    case 24: return 'slight-left';   // kStayLeft
+    case 25: return 'straight';      // kMerge
+    case 26: return 'straight';      // kRoundaboutEnter
+    case 27: return 'straight';      // kRoundaboutExit
+    default: return 'straight';
+  }
+}
+
 function mapManeuver(
   maneuver: ValhallaManeuver,
   shape: LngLat[]
@@ -59,7 +99,7 @@ function mapManeuver(
     instruction: maneuver.instruction,
     distance: metersFromMiles(maneuver.length),
     duration: maneuver.time,
-    maneuverType: maneuver.type,
+    maneuverType: mapValhallaManeuverType(maneuver.type),
     startLocation: shape[maneuver.begin_shape_index] ?? [0, 0],
   };
 }

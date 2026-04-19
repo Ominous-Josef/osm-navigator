@@ -27,8 +27,8 @@ export interface RouteStep {
   distance: number;
   /** Duration for this step in seconds. */
   duration: number;
-  /** Maneuver type from Valhalla. */
-  maneuverType: number;
+  /** Maneuver type string (mapped from Valhalla integer codes). */
+  maneuverType: string;
   /** Start coordinate of this step. */
   startLocation: LngLat;
 }
