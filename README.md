@@ -24,7 +24,7 @@ This project is managed as a monorepo using Yarn Workspaces:
 | Package | Description |
 | :--- | :--- |
 | [`@osm-navigator/core`](./packages/core) | Core logic for routing (Valhalla), geocoding (Photon), and shared types. |
-| [`@osm-navigator/native-map`](./packages/native-map) | Expo Module wrapping MapLibre Native for high-performance map rendering. |
+| [`@osm-navigator/native-map`](./packages/native-map) | Map component backed by MapLibre Native (via `@maplibre/maplibre-react-native`, see [ADR 0001](./docs/adr/0001-native-map-rendering-strategy.md)). |
 | [`@osm-navigator/ui-navigation`](./packages/ui-navigation) | Ready-to-use UI components for navigation (banners, turn icons, etc.). |
 | [`navigation-example`](./apps/navigation-example) | A comprehensive demo app showcasing real-time navigation and search. |
 
@@ -32,9 +32,9 @@ This project is managed as a monorepo using Yarn Workspaces:
 
 ## 🛠️ Requirements
 
-- **Yarn Classic (v1)**: Workspaces management.
-- **Expo SDK 51+**: Development Builds are required for native modules.
-- **React Native 0.74+**: Utilizing the New Architecture (Fabric).
+- **Yarn Classic (v1.22.22)**: Workspaces management. Run `corepack enable` to get the pinned version.
+- **Expo SDK 57**: Development Builds are required for native modules (see [ADR 0002](./docs/adr/0002-expo-sdk-57-baseline.md)).
+- **React Native 0.86 / React 19.2**: New Architecture only.
 - **iOS**: Swift 5.9+, iOS 13.4+
 - **Android**: Kotlin 1.9+, SDK 24+
 
@@ -86,7 +86,7 @@ OSM Navigator follows a modular architecture:
 
 The project is currently in active development. Current focus areas include:
 
-- [x] Initial MapLibre Native integration via Expo Module.
+- [ ] MapLibre Native integration (via `@maplibre/maplibre-react-native`, see ADR 0001).
 - [x] Basic routing and geocoding clients.
 - [/] **Real-time Navigation Performance**: Optimizing geometry lookups and simulation state.
 - [ ] **Native Permissions**: Automating location permission requests via Expo Config Plugin.

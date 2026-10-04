@@ -1,25 +1,25 @@
-import * as React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { NativeMapView } from './MapViewNativeComponent';
-import { MapViewProps, MapViewRef } from './types';
+import { useCallback } from 'react';
+import { NativeSyntheticEvent, StyleSheet, View } from 'react-native';
+import { NativeMapView, NativePressEvent } from './MapViewNativeComponent';
+import { MapViewProps } from './types';
 
-export const MapView = React.forwardRef<MapViewRef, MapViewProps>(({
+export function MapView({
+  // TODO(phase 4): wire ref to native view commands (animateTo, fitBounds, takeSnapshot)
+  // via useImperativeHandle. Destructured so it isn't spread onto the native view.
+  ref: _ref,
   style,
   styleURL = "https://tiles.openfreemap.org/styles/liberty",
   initialCamera,
   camera,
   onPress,
   ...props
-}, ref) => {
-  const handlePress = React.useCallback((event: any) => {
+}: MapViewProps) {
+  const handlePress = useCallback((event: NativeSyntheticEvent<NativePressEvent>) => {
     if (onPress) {
       const { latitude, longitude } = event.nativeEvent;
       onPress([longitude, latitude]);
     }
   }, [onPress]);
-
-  // TODO: Wire ref to native view commands (animateTo, fitBounds, takeSnapshot)
-  // via requireNativeModule or UIManager.dispatchViewManagerCommand
 
   return (
     <View style={[styles.container, style]}>
@@ -33,9 +33,7 @@ export const MapView = React.forwardRef<MapViewRef, MapViewProps>(({
       />
     </View>
   );
-});
-
-MapView.displayName = 'MapView';
+}
 
 const styles = StyleSheet.create({
   container: {

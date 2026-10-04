@@ -17,7 +17,7 @@ export function TurnByTurnOverlay({ navigationState, style, ...rest }: TurnByTur
     <View style={[styles.container, style]} {...rest}>
       {route.steps.map((step, i) => (
         <View key={i} style={i === currentStepIndex ? styles.current : styles.step}>
-          <Text>{step.instruction}</Text>
+          <Text style={i === currentStepIndex ? styles.currentText : undefined}>{step.instruction}</Text>
           <Text>{step.distance} m</Text>
         </View>
       ))}
@@ -28,5 +28,6 @@ export function TurnByTurnOverlay({ navigationState, style, ...rest }: TurnByTur
 const styles = StyleSheet.create({
   container: { flexDirection: "column", backgroundColor: "rgba(0,0,0,0.5)", padding: 8 },
   step: { opacity: 0.5, marginBottom: 4 },
-  current: { opacity: 1, fontWeight: "bold", marginBottom: 4 },
+  current: { opacity: 1, marginBottom: 4 },
+  currentText: { fontWeight: "bold" },
 });

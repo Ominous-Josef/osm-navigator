@@ -3,6 +3,5 @@ export type {
   RouteRequest,
   Route,
   RouteStep,
-  LngLat,
   CostingModel,
 } from "./types";

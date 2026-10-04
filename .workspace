@@ -3,5 +3,6 @@
 This directory contains the open-source mapping and navigation SDK for React Native and Expo.
 
 - All packages are in /packages
-- Example app is in /apps/example
+- Example app is in /apps/navigation-example
+- Project docs and decision records (ADRs) are in /docs
 - See root README.md for details

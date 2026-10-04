@@ -1,5 +1,4 @@
-/** WGS84 coordinate pair [longitude, latitude] — GeoJSON convention. */
-export type LngLat = [number, number];
+import type { LngLat, ManeuverType } from "../types";
 
 /** Supported Valhalla costing models. */
 export type CostingModel =
@@ -27,8 +26,8 @@ export interface RouteStep {
   distance: number;
   /** Duration for this step in seconds. */
   duration: number;
-  /** Maneuver type string (mapped from Valhalla integer codes). */
-  maneuverType: string;
+  /** Maneuver kind (mapped from Valhalla integer codes). */
+  maneuverType: ManeuverType;
   /** Start coordinate of this step. */
   startLocation: LngLat;
 }

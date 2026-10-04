@@ -1,14 +1,8 @@
-import type { ViewStyle } from "react-native";
+import type { CameraState, LngLat } from "@osm-navigator/core";
+import type { Ref } from "react";
+import type { StyleProp, ViewStyle } from "react-native";
 
-export type LngLat = [number, number];
-
-export interface CameraState {
-  latitude: number;
-  longitude: number;
-  zoom: number;
-  pitch?: number;
-  bearing?: number;
-}
+export type { CameraState, LngLat };
 
 export interface CameraChangeEvent {
   latitude: number;
@@ -20,7 +14,8 @@ export interface CameraChangeEvent {
 }
 
 export interface MapViewProps {
-  style?: ViewStyle;
+  ref?: Ref<MapViewRef>;
+  style?: StyleProp<ViewStyle>;
   styleURL?: string;
   initialCamera?: CameraState;
   camera?: CameraState;

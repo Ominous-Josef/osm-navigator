@@ -1,4 +1,4 @@
-import React from 'react';
+import type { FC } from 'react';
 import { StyleSheet, View, Text, ViewProps } from 'react-native';
 import { ManeuverIcon, ManeuverType } from './ManeuverIcons';
 
@@ -9,7 +9,7 @@ export interface NavigationBannerProps extends ViewProps {
   nextInstruction?: string;
 }
 
-export const NavigationBanner: React.FC<NavigationBannerProps> = ({
+export const NavigationBanner: FC<NavigationBannerProps> = ({
   instruction,
   distanceToManeuver,
   maneuverType,

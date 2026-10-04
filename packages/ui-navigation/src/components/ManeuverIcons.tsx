@@ -1,7 +1,8 @@
-import React from 'react';
+import type { ManeuverType } from '@osm-navigator/core';
+import type { FC } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-export type ManeuverType = 'straight' | 'left' | 'right' | 'slight-left' | 'slight-right' | 'u-turn' | 'arrive';
+export type { ManeuverType };
 
 interface ManeuverIconProps {
   type: ManeuverType;
@@ -9,7 +10,7 @@ interface ManeuverIconProps {
   color?: string;
 }
 
-export const ManeuverIcon: React.FC<ManeuverIconProps> = ({ type, size = 32 }) => {
+export const ManeuverIcon: FC<ManeuverIconProps> = ({ type, size = 32 }) => {
   const getIcon = () => {
     switch (type) {
       case 'straight': return '⬆️';

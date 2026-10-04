@@ -4,8 +4,20 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc --noEmit"
+    "build": "tsc -b",
+    "typecheck": "tsc -b"
   },
-  "react-native": "src/index.ts"
+  "react-native": "src/index.ts",
+  "dependencies": {
+    "@osm-navigator/core": "^0.1.0"
+  },
+  "peerDependencies": {
+    "react": "^19.1.0",
+    "react-native": ">=0.80.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.0",
+    "react": "19.2.3",
+    "react-native": "0.86.3"
+  }
 }

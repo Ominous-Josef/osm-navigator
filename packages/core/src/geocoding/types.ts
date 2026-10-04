@@ -1,10 +1,12 @@
+import type { LngLat } from "../types";
+
 export interface GeocodeRequest {
   /** Free-form search query. */
   query: string;
   /** Maximum number of results to return. @default 5 */
   limit?: number;
   /** Optional bias point to prefer nearby results [lng, lat]. */
-  locationBias?: [number, number];
+  locationBias?: LngLat;
 }
 
 export interface GeocodeResult {
@@ -13,7 +15,7 @@ export interface GeocodeResult {
   /** Full formatted address. */
   address: string;
   /** Coordinate [lng, lat]. */
-  coordinates: [number, number];
+  coordinates: LngLat;
   /** Photon place type (e.g. "city", "street", "house"). */
   type: string;
   /** Confidence score (0–1) if available. */
@@ -23,7 +25,7 @@ export interface GeocodeResult {
 }
 
 export interface ReverseGeocodeRequest {
-  coordinates: [number, number];
+  coordinates: LngLat;
   /** Maximum number of results. @default 1 */
   limit?: number;
 }

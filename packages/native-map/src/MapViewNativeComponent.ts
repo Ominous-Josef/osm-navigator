@@ -1,26 +1,20 @@
+import type { CameraState, LngLat } from '@osm-navigator/core';
 import { requireNativeViewManager } from 'expo-modules-core';
-import * as React from 'react';
-import { ViewProps } from 'react-native';
+import type { ComponentType } from 'react';
+import type { NativeSyntheticEvent, ViewProps } from 'react-native';
+
+export interface NativePressEvent {
+  latitude: number;
+  longitude: number;
+}
 
 interface NativeMapViewProps extends ViewProps {
   styleURL?: string;
-  initialCamera?: {
-    latitude: number;
-    longitude: number;
-    zoom: number;
-    bearing?: number;
-    pitch?: number;
-  };
-  camera?: {
-    latitude: number;
-    longitude: number;
-    zoom: number;
-    bearing?: number;
-    pitch?: number;
-  };
-  route?: [number, number][];
-  onPress?: (event: { nativeEvent: { latitude: number; longitude: number } }) => void;
+  initialCamera?: CameraState;
+  camera?: CameraState;
+  route?: LngLat[];
+  onPress?: (event: NativeSyntheticEvent<NativePressEvent>) => void;
   showUserLocation?: boolean;
 }
 
-export const NativeMapView: React.ComponentType<NativeMapViewProps> = requireNativeViewManager('OSMNavigator');
+export const NativeMapView: ComponentType<NativeMapViewProps> = requireNativeViewManager('OSMNavigator');

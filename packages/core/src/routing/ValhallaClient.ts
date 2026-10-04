@@ -1,9 +1,9 @@
 import { getConfig } from "../config";
+import type { LngLat, ManeuverType } from "../types";
 import type {
   RouteRequest,
   Route,
   RouteStep,
-  LngLat,
   ValhallaRouteResponse,
   ValhallaManeuver,
 } from "./types";
@@ -53,11 +53,11 @@ function metersFromMiles(miles: number): number {
 
 /**
  * Map Valhalla integer maneuver types to human-readable string labels
- * that match the ManeuverType union in @osm-navigator/ui-navigation.
+ * that match the shared ManeuverType union.
  *
  * Reference: https://valhalla.github.io/valhalla/api/turn-by-turn/api-reference/#maneuver-types
  */
-function mapValhallaManeuverType(type: number): string {
+function mapValhallaManeuverType(type: number): ManeuverType {
   switch (type) {
     case 0: return 'straight';       // kNone
     case 1: return 'straight';       // kStart

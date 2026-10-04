@@ -1,16 +1,17 @@
 // RouteProgressBar.tsx
 // Progress bar for route navigation
 
-import { StyleSheet, View, ViewProps } from "react-native";
+import { DimensionValue, StyleSheet, View, ViewProps } from "react-native";
 
 export interface RouteProgressBarProps extends ViewProps {
   progress: number; // 0 to 1
 }
 
 export function RouteProgressBar({ progress, style, ...rest }: RouteProgressBarProps) {
+  const width: DimensionValue = `${Math.max(0, Math.min(1, progress)) * 100}%`;
   return (
     <View style={[styles.bar, style]} {...rest}>
-      <View style={[styles.progress, { width: `${Math.max(0, Math.min(1, progress)) * 100}%` }]} />
+      <View style={[styles.progress, { width }]} />
     </View>
   );
 }

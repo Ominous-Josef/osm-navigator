@@ -1,6 +1,6 @@
-import { fetchRoute, geocode, GeocodeResult, Route } from '@osm-navigator/core';
-import { LngLat, MapView } from '@osm-navigator/native-map';
-import { ManeuverType, NavigationBanner } from '@osm-navigator/ui-navigation';
+import { fetchRoute, geocode, GeocodeResult, LngLat, Route, toErrorMessage } from '@osm-navigator/core';
+import { MapView } from '@osm-navigator/native-map';
+import { NavigationBanner } from '@osm-navigator/ui-navigation';
 import * as Location from 'expo-location';
 import * as Speech from 'expo-speech';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -255,8 +255,8 @@ export default function App() {
       setIsArrived(false);
       setIsNavigating(true);
       safeSpeech('Starting navigation to ' + destQuery);
-    } catch (error: any) {
-      const message = error?.message || 'Unknown error';
+    } catch (error: unknown) {
+      const message = toErrorMessage(error);
       Alert.alert(
         'Navigation Error',
         `Could not start navigation: ${message}`,
@@ -360,7 +360,7 @@ export default function App() {
           <NavigationBanner
             instruction={currentStep?.instruction || 'Follow the road'}
             distanceToManeuver={Math.round(distanceToNextManeuver)}
-            maneuverType={(currentStep?.maneuverType as ManeuverType) || 'straight'}
+            maneuverType={currentStep?.maneuverType ?? 'straight'}
             nextInstruction={nextStep?.instruction}
           />
           
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
   map: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   searchPanel: {
     position: 'absolute',
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   loaderContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.3)',
     justifyContent: 'center',
     alignItems: 'center',

@@ -1,0 +1,309 @@
+# osm-navigator — Fix Plan
+
+**Scope:** every audit finding (P0–P3), on **Expo SDK 57** (React Native 0.86, React 19.2), with the upgrade done in Phase 0 ([ADR 0002](./docs/adr/0002-expo-sdk-57-baseline.md)). `apps/example` gets deleted. Reference: [project_audit.md](./project_audit.md)
+
+Each phase ends with a **checkpoint**: I verify the work, report back, and wait for your go-ahead before the next phase.
+
+## Progress
+
+Status: ✅ done · 🟡 in progress · ⬜ not started. Update this table and the phase's checklist whenever work lands.
+
+| Phase | Status | Commit(s) | Notes |
+|---|---|---|---|
+| 0 — Foundation + SDK 57 | ✅ | `6c1ca67`, follow-up | Checkpoint passed on 2026-10-04. |
+| 1 — Types and package hygiene | ✅ | see Phase 1 checkpoint | Checkpoint passed on 2026-10-04. |
+| 2 — Core service hardening | ⬜ | | Next up. |
+| 3 — Navigation engine | ⬜ | | |
+| 4 — Native map layer | ⬜ | | |
+| 5 — UI components | ⬜ | | |
+| 6 — Example app rebuild | ⬜ | | |
+| 7 — Tooling and docs | ⬜ | | |
+
+---
+
+## Decisions
+
+### D1. How to build the native map layer — ✅ DECIDED: Option C (A now, B later)
+Recorded in [ADR 0001](./docs/adr/0001-native-map-rendering-strategy.md). Uses `@maplibre/maplibre-react-native` **11.x**.
+
+### D5. Expo SDK — ✅ DECIDED: SDK 57, upgraded in Phase 0
+Recorded in [ADR 0002](./docs/adr/0002-expo-sdk-57-baseline.md).
+
+<details><summary>Original D1 analysis</summary>
+
+
+You said no native code exists. Writing a MapLibre wrapper from scratch in Swift and Kotlin is the **single largest and riskiest piece** of this project. It's realistically weeks of work across two platforms, plus ongoing maintenance whenever MapLibre releases. I want to challenge whether it's worth doing first.
+
+| Option | Pros | Cons |
+|---|---|---|
+| **A. (Recommended) Wrap `@maplibre/maplibre-react-native` behind our own `MapView` API** | Unblocks the app in days. Mature and battle-tested. Our public API (`MapViewProps`, `MapViewRef`) stays ours, so we can swap the internals later without breaking users. | Adds a large dependency. We inherit its New Architecture status and release cadence (version compatibility with SDK 51 still needs checking). |
+| **B. Write our own Expo Module (Swift + Kotlin)** | Full control and a smaller surface. Matches the README's stated vision. | Weeks of work before anything renders. Two native codebases to maintain. Hard to test. Blocks every end-to-end check. |
+| **C. A now, B later** | Same as A now. B becomes a roadmap item once the JS side is proven. | Same as A for the time being. |
+
+**Why I recommend A/C:** the value of this SDK is routing, the navigation engine and the UI. The map renderer is the commodity part. Hand-writing it first delays everything else. The interface layer in Phase 4 keeps B open for later.
+
+</details>
+
+### D2. Runtime validation of API responses
+- **(Recommended) Hand-written type guards.** No dependencies, and the response shapes are small.
+- Zod: less code to write, but adds roughly 50 KB plus a dependency to a core SDK package.
+
+### D3. Maneuver icons
+- **(Recommended) `react-native-svg` as a peer dependency** with vector arrow paths. Themeable (honours `color`) and identical on every platform.
+- Bundled PNG sets: no extra dependency, but they can't be recoloured and each icon needs several resolutions.
+
+### D4. Test runner
+- **(Recommended) Jest + `jest-expo`.** The standard choice for RN/Expo, and it covers both the pure TypeScript in `core` and component tests.
+
+---
+
+## Phase 0 — Repo foundation + SDK 57 baseline (makes the project buildable)
+
+Fixes audit P0 #2, #3, #4 and most of P3, and moves to SDK 57.
+
+| Change | Files |
+|---|---|
+| **Upgrade to Expo SDK 57:** `expo@~57`, then `npx expo install --fix` to align `react-native` 0.86.3, `react` 19.2.3, `expo-router`, `expo-location`, `expo-speech`, `expo-dev-client`, `react-native-screens` and `safe-area-context`. Remove the pin on `expo-modules-autolinking`. Bump `@types/react` to 19. | `apps/navigation-example/package.json`, root `package.json` |
+| Review the SDK 52–57 release notes for breaking changes in router, location and speech; record them in the checkpoint report | — |
+| Anchor native ignores to app folders only (`/apps/*/ios/`, `/apps/*/android/`) and add `*.tsbuildinfo` | [.gitignore](./.gitignore) |
+| Untrack the committed `tsconfig.tsbuildinfo` files | `packages/*/tsconfig.tsbuildinfo` |
+| Delete the duplicate demo app | `apps/example/` |
+| Remove the meaningless root Expo config | root `app.json`, the `expo` block and the `native-map` devDep in root [package.json](./package.json) |
+| Rename the Metro config so Metro actually loads it | `apps/navigation-example/metro-config.js` → `metro.config.js` |
+| Consistent entrypoints: `main`/`types` → `dist/` (for publishing) and `"react-native": "src/index.ts"` (Metro reads this field first, so no build step is needed during development) | `packages/*/package.json` |
+| Drop the hand-written monorepo overrides (`extraNodeModules`, `watchFolders`, `disableHierarchicalLookup`). SDK 52+ configures monorepos automatically; keep only what verification proves is necessary. | `metro.config.js` |
+| Delete the redundant root-level `index.ts` re-export files in each package | `packages/*/index.ts` |
+| Update stale docs | [.workspace](./.workspace), README structure table |
+
+**Verify:**
+- `yarn install` succeeds.
+- `npx expo-doctor` reports no version mismatches.
+- `yarn typecheck` runs; I record the baseline errors, which are expected and fixed in Phase 1.
+- Metro resolves all `@osm-navigator/*` imports (`npx expo export --platform android` gets past resolution).
+
+### Phase 0 checkpoint (2026-10-04)
+
+Results:
+- ✅ `yarn install` works. Yarn 1.22.22 comes from Corepack and is pinned via `packageManager`.
+- ✅ `npx expo-doctor`: all 21 checks pass.
+- ✅ `npx expo export --platform android --clear` bundles 1221 modules, and every `@osm-navigator/*` import resolves. One earlier run failed on `expo/AppEntry`; it looked like a stale cache and didn't happen again.
+- ✅ Typecheck baseline (`tsc --noEmit` per workspace):
+
+  | Workspace | Errors |
+  |---|---|
+  | `core` | 0 |
+  | `native-map` | 0 |
+  | `ui-navigation` | 3: `@osm-navigator/core` not found; implicit `any` in `TurnByTurnOverlay` |
+  | `navigation-example` | 6: `@osm-navigator/*` not found; implicit `any` `coords`; `StyleSheet.absoluteFillObject` removed in RN 0.86 → `absoluteFill` |
+
+  All of these are Phase 1 work.
+- ✅ SDK 52–57 breaking changes, checked against the APIs the app actually uses:
+  - `expo-router`: `Stack`
+  - `expo-location`: permissions, `watchPositionAsync`, `getCurrentPositionAsync`, `Accuracy`
+  - `expo-speech`: `speak`, `stop`
+
+  The SDK 57 type definitions only flag `absoluteFillObject`.
+
+Leftovers to close Phase 0:
+- [x] Make the links in this plan relative.
+- [x] Update `.workspace`: it still points to `/apps/example`.
+- [x] Minimal README correction. Requirements still say SDK 51 / RN 0.74, and the roadmap claims a MapLibre Expo Module exists. The full rewrite is Phase 7.
+- [x] Remove `expo.autolinking.searchPaths` from `apps/navigation-example/package.json`, plus the dangling `packages/native-map/expo-module.config.json` and the `expo` block in its `package.json`. They make autolinking look for native classes that don't exist, which will break the first `expo prebuild`. This was scheduled for Phase 4; it's moved here because it's cheap.
+- [x] Decide what to do with `implementation_plan.md.metadata.json`, `project_audit.md.metadata.json` and `transcript_full.jsonl`: gitignored. The plan and audit are committed.
+
+Noted for Phase 1: `expo install --fix` moved the app to TypeScript `~6.0.3`, but the root is still `^5.4` (5.9.3 installed). Settle on one version at the root, TS 6, because that's what SDK 57 expects.
+
+---
+
+## Phase 1 — Types and package hygiene
+
+Fixes audit P2 type safety.
+
+- **Single source of truth for shared types in `core`:** `LngLat`, `CameraState` and `ManeuverType` (moved from ui-navigation). `RouteStep.maneuverType: ManeuverType`, not `string`. native-map and ui-navigation re-export or import them.
+- **Remove all `any`:**
+  - `MapView` events get a typed `NativeSyntheticEvent<…>`.
+  - `catch (e: unknown)` combined with a shared `toErrorMessage(e: unknown): string` helper in core.
+- **Correct dependency declarations:**
+  - `ui-navigation` → dependency on `@osm-navigator/core`.
+  - All UI and native packages → peer deps on `react` / `react-native` with real ranges.
+- **TS project references:** ui-navigation → core, native-map → core.
+- **One TypeScript version:** a single root `typescript`; remove it from the app.
+- **Fix the compile errors found while reading:**
+  - Switch to `jsx: react-jsx` (automatic runtime).
+  - Use React 19 patterns: `ref` as a prop instead of `forwardRef`, and `React.JSX` types.
+  - Type the `DimensionValue` for the progress width.
+  - Remove `fontWeight` from the View style.
+- **Add an ESLint config** (`@typescript-eslint/no-explicit-any: error`, `react-hooks` plugin).
+
+**Verify:** `yarn typecheck` and `yarn lint` both pass with zero errors.
+
+### Phase 1 checkpoint (2026-10-04)
+
+Results:
+- ✅ `yarn typecheck` (`tsc -b` + app): **0 errors**, down from 9.
+- ✅ `yarn lint` (ESLint 10 flat config, `eslint.config.mjs`): **0 problems** across 27 files. `no-explicit-any` is confirmed to fire.
+- ✅ No `any` left in `packages/*/src` or the app.
+- ✅ Regression checks: `expo-doctor` passes all 21 checks, and the Android export bundles (1223 modules).
+
+What changed beyond the plan bullets above:
+- **TypeScript 6.0.3** is now the single version, at the root. ESLint 10 + `typescript-eslint` 8.71 (supports TS `<6.1`) + `eslint-plugin-react-hooks` 7 replace ESLint 8 / `@typescript-eslint` 7, which don't support TS 6.
+- **`typecheck` and `build` are `tsc -b`.** The root `tsconfig.json` is solution-style. `tsc -b` writes `dist/` declarations (gitignored), and the app resolves package types through them.
+- **Dependency declarations:**
+  - `native-map` and `ui-navigation` depend on `@osm-navigator/core ^0.1.0`;
+  - peer deps `react ^19.1.0` and `react-native >=0.80.0` (`native-map` also `expo >=54.0.0`);
+  - devDeps pinned to the app's versions.
+- **`MapView` uses the React 19 `ref` prop**, with no `forwardRef`. The ref is accepted but wiring it via `useImperativeHandle` is Phase 4.
+
+Deferred: none. React Compiler rules (react-hooks 7) raised nothing in the app.
+
+---
+
+## Phase 2 — Core service hardening
+
+Fixes audit P1 core services.
+
+- **New `core/src/http/` (DRY):** a `requestJson<T>(url, init, guard, { timeoutMs, signal })` helper that adds:
+  - timeouts via `AbortController` and support for a caller-supplied `signal`;
+  - typed errors: `NetworkError`, `TimeoutError`, `ServiceError(status, body)`, `InvalidResponseError`;
+  - a configurable `User-Agent` / headers taken from config (fair-use compliance).
+- **Response guards** (D2) for Valhalla and Photon responses. No more blind `as` casts.
+- **Valhalla:**
+  - Request `units: "kilometers"`.
+  - Handle **all legs** and concatenate geometry and steps with corrected shape offsets.
+  - Complete the maneuver mapping (exits → slight-left/right; add roundabout, merge, ferry and keep variants).
+  - Drop the `[0, 0]` fallback and throw `InvalidResponseError` instead.
+  - Accept `signal`.
+- **Photon:** accept `signal` and validate responses.
+- **Config:**
+  - `initOSMNavigator` validates the URLs and strips trailing slashes.
+  - Add `requestTimeoutMs` and `userAgent`.
+  - `getConfig()` returns a `Readonly` copy.
+- **Tests (D4):**
+  - polyline6 decoder against known vectors;
+  - maneuver mapping table;
+  - both clients with mocked `fetch` covering success, HTTP error, timeout, malformed body and multi-leg.
+
+**Verify:** `yarn test` passes, and coverage of `core/src` is at least 90%.
+
+---
+
+## Phase 3 — Navigation engine (moved out of the app screen)
+
+Fixes audit P1 #6, #7, #8.
+
+- **`core/src/geo/`:** `haversineDistance`, `bearing`, `projectOntoSegment` and `cumulativeDistances`, all pure and tested.
+- **`core/src/navigation/NavigationEngine`:** a pure, framework-agnostic state machine.
+  - `new NavigationEngine(route, options)` → `update(position): NavigationState`.
+  - Snaps to the nearest **segment** within a **forward-looking window**, so progress only moves forward and looping routes don't cause jumps.
+  - Uses precomputed step start *indices*, not `indexOf` on coordinates.
+  - **Along-route** distance to the next maneuver and to the destination, plus a progress fraction.
+  - **Latched arrival**, emitted exactly once.
+  - **Off-route detection** (distance threshold plus hysteresis) emitted as state. Rerouting stays the app's decision.
+  - Events: `onStepChange`, `onArrive`, `onOffRoute`, which drive voice prompts with no duplicates.
+- `NavigationState` moves to core and is extended with `distanceRemainingMeters`, `progress` and `isOffRoute`.
+- **Tests:** synthetic routes (straight, L-turn, loop-back, overlapping), GPS jitter, arrival latch, off-route.
+
+**Verify:** engine tests pass. Each loop-back and overlap scenario test asserts that progress never moves backward.
+
+---
+
+## Phase 4 — Native map layer (approach set by D1)
+
+Fixes audit P0 #1 and the MapView P1 findings.
+
+Same for every D1 option:
+- `MapView` reads its default `styleURL` from `getConfig().mapStyleURL`.
+- **`ref` wired** via `useImperativeHandle`: `animateTo`, `fitBounds`, `takeSnapshot`.
+- **Events bridged:** `onMapLoaded`, `onCameraChange`, `onPress`, `onLongPress`, plus a new `onMapError` (style or tile load failure).
+- `route` is rendered as a GeoJSON line layer, and `showUserLocation` is honoured.
+
+Option-specific:
+- **A/C:** an adapter in `native-map/src/` maps our props to `@maplibre/maplibre-react-native`. Delete the dangling `expo-module.config.json` until option B happens.
+- **B:** `packages/native-map/ios/*.swift` and `android/src/**/*.kt` as an Expo Module with view props, events and `AsyncFunction` view commands. Probably split into sub-phases 4a (iOS) and 4b (Android).
+
+The config plugin either gets rewritten to set location permission strings (iOS `NSLocationWhenInUseUsageDescription`, Android permissions), or deleted in favour of the `expo-location` plugin. **I recommend deleting it** to avoid duplicating what expo-location already does.
+
+**Verify:** a dev build runs on an Android emulator. The map renders, a press sets a destination, the route draws, and `animateTo` works.
+
+---
+
+## Phase 5 — UI components and design system
+
+Fixes audit P2 UI.
+
+- **`ui-navigation/src/theme/`:** design tokens (colours, spacing, radii, typography) plus a `NavigationThemeProvider` / `useNavigationTheme`. Components stop hard-coding colours.
+- **`ui-navigation/src/format/`:** `formatDistance(m, units, locale)` and `formatDuration(s)`, shared and tested.
+- **ManeuverIcon:** SVG paths (D3) that honour `color`, covering the full `ManeuverType` set.
+- **NavigationBanner:** uses the theme and formatters, and guards against long text.
+- **TurnByTurnOverlay:**
+  - honour `units` and `onClose`;
+  - scrollable list with stable keys;
+  - readable contrast;
+  - empty state when the route has no steps.
+- **RouteProgressBar:** themed and accessible (`accessibilityRole="progressbar"`, `accessibilityValue`).
+- **New components:**
+  - `OffRouteBanner` (rerouting / off-route state);
+  - `ArrivalCard` (extracted from the app);
+  - `ErrorBanner` (offline / service errors), reusable.
+- Component tests with `@testing-library/react-native`.
+
+**Verify:** component tests pass, and I review the screens visually in the emulator.
+
+---
+
+## Phase 6 — Rebuild the navigation example app
+
+Fixes audit P1 #5, #9, #10, #11.
+
+- Split the 525-line screen into:
+  - `SearchPanel`;
+  - `NavigationHUD`;
+  - `useDestinationSearch` (debounce + `AbortController`, latest request wins);
+  - `useLocationTracking` (subscription that's safe against the cleanup race);
+  - `useNavigationSession` (wraps `NavigationEngine` and speech).
+- **Location:**
+  - `getCurrentPositionAsync` gets a timeout and falls back to `getLastKnownPositionAsync`;
+  - permission-denied state with an "Open Settings" action.
+- **Loading:** the Start button is disabled and shows a spinner while a route loads. No overlapping requests.
+- **States:**
+  - empty search results;
+  - search and route errors with a retry action;
+  - offline banner;
+  - off-route → automatic reroute with a debounce.
+- Arrival stops tracking and speaks once.
+
+**Verify:** a manual test pass in the emulator using a mocked GPS route (`adb emu geo fix` / a GPX file): start, follow, a forced off-route, arrival, and exit mid-start (the leak check).
+
+---
+
+## Phase 7 — Tooling and docs
+
+- GitHub Actions CI: `install → typecheck → lint → test` on every PR.
+- README: accurate setup and requirements, the D1 outcome, the fair-use note about the public endpoints, and an API overview per package.
+- Per-package READMEs updated to match the new APIs.
+
+**Verify:** CI is green on a test branch.
+
+---
+
+## Sequencing
+
+```mermaid
+flowchart LR
+  P0["P0 Foundation + SDK 57"] --> P1["P1 Types"]
+  P1 --> P2["P2 Core hardening"]
+  P2 --> P3["P3 Nav engine"]
+  P1 --> P4["P4 Native map (MapLibre RN 11.x)"]
+  P3 --> P5["P5 UI components"]
+  P4 --> P6["P6 Example app"]
+  P5 --> P6
+  P6 --> P7["P7 Tooling/docs"]
+```
+
+Phases 2–3 (pure TypeScript) and Phase 4 (native) can run in parallel once Phase 1 is done.
+
+## Assumptions
+- Yarn Classic v1 stays the package manager.
+- Android emulator for end-to-end checks (your PATH has an Android SDK). iOS checks need a Mac, so I can't run them here.
+- Phase 0 needs network access for `yarn install` (you'll be asked to approve it).
+- No backwards-compatibility promise yet (v0.x), so breaking API changes such as `ManeuverType` moving to core are acceptable.

@@ -7,15 +7,17 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "yarn workspace @osm-navigator/core build && yarn workspace @osm-navigator/native-map build && yarn workspace @osm-navigator/ui-navigation build",
-    "typecheck": "yarn workspace @osm-navigator/core typecheck && yarn workspace @osm-navigator/native-map typecheck && yarn workspace @osm-navigator/ui-navigation typecheck",
-    "lint": "eslint . --ext .ts,.tsx"
+    "build": "tsc -b",
+    "typecheck": "tsc -b && tsc -p apps/navigation-example",
+    "lint": "eslint ."
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0",
-    "eslint": "^8.57.0",
-    "typescript": "^5.4.0"
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.12.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.13.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.0"
   },
   "packageManager": "yarn@1.22.22"
 }
