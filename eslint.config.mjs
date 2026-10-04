@@ -26,6 +26,10 @@ export default tseslint.config(
     },
   },
   {
+    files: ["**/__tests__/**/*.ts"],
+    languageOptions: { globals: globals.jest },
+  },
+  {
     // CommonJS config files (Babel, Metro, Expo config plugins).
     files: ["**/*.js"],
     languageOptions: {

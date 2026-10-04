@@ -7,6 +7,8 @@ export interface GeocodeRequest {
   limit?: number;
   /** Optional bias point to prefer nearby results [lng, lat]. */
   locationBias?: LngLat;
+  /** Cancels the request; `geocode` then rejects with `AbortError`. */
+  signal?: AbortSignal;
 }
 
 export interface GeocodeResult {
@@ -28,6 +30,8 @@ export interface ReverseGeocodeRequest {
   coordinates: LngLat;
   /** Maximum number of results. @default 1 */
   limit?: number;
+  /** Cancels the request; `reverseGeocode` then rejects with `AbortError`. */
+  signal?: AbortSignal;
 }
 
 // ---------- Raw Photon API shapes ----------

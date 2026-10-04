@@ -16,8 +16,10 @@ export interface RouteRequest {
   destination: LngLat;
   /** Routing profile. @default "auto" */
   costing?: CostingModel;
-  /** Optional waypoints between origin and destination. */
+  /** Optional waypoints between origin and destination (passed through, not stopped at). */
   waypoints?: LngLat[];
+  /** Cancels the request; `fetchRoute` then rejects with `AbortError`. */
+  signal?: AbortSignal;
 }
 
 export interface RouteStep {
@@ -30,32 +32,37 @@ export interface RouteStep {
   maneuverType: ManeuverType;
   /** Start coordinate of this step. */
   startLocation: LngLat;
+  /** Index into `Route.geometry` where this step starts. */
+  geometryIndex: number;
 }
 
 export interface Route {
-  /** GeoJSON LineString coordinates for the full route. */
+  /** GeoJSON LineString coordinates for the full route, across all legs. */
   geometry: LngLat[];
   /** Total distance in meters. */
   distanceMeters: number;
   /** Total duration in seconds. */
   durationSeconds: number;
-  /** Step-by-step maneuver instructions. */
+  /** Step-by-step maneuver instructions, across all legs. */
   steps: RouteStep[];
   /** Raw Valhalla response, preserved for advanced use. */
   raw: ValhallaRouteResponse;
 }
 
-// ---------- Raw Valhalla API shapes ----------
-export interface ValhallaLocation {
-  lon: number;
-  lat: number;
+// ---------- Raw Valhalla API shapes (only the fields we read) ----------
+// Requested with `units: "kilometers"`.
+
+export interface ValhallaSummary {
+  length: number;       // kilometers
+  time: number;         // seconds
 }
 
 export interface ValhallaManeuver {
   type: number;
   instruction: string;
-  length: number;       // miles
+  length: number;       // kilometers
   time: number;         // seconds
+  /** Index into this leg's decoded shape. */
   begin_shape_index: number;
   end_shape_index: number;
 }
@@ -63,14 +70,12 @@ export interface ValhallaManeuver {
 export interface ValhallaLeg {
   maneuvers: ValhallaManeuver[];
   shape: string;        // encoded polyline6
-  length: number;       // miles
-  duration: number;     // seconds
+  summary: ValhallaSummary;
 }
 
 export interface ValhallaTrip {
   legs: ValhallaLeg[];
-  length: number;
-  time: number;
+  summary: ValhallaSummary;
   units: string;
 }
 

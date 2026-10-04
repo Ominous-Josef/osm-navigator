@@ -3,7 +3,7 @@ import { MapView } from '@osm-navigator/native-map';
 import { NavigationBanner } from '@osm-navigator/ui-navigation';
 import * as Location from 'expo-location';
 import * as Speech from 'expo-speech';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,

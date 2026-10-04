@@ -1,0 +1,117 @@
+{
+  "trip": {
+    "units": "kilometers",
+    "summary": {
+      "length": 2.766,
+      "time": 450.745
+    },
+    "legs": [
+      {
+        "shape": "g~idcBwjpoXl@InGo@iD}mAYsKe@cScAwb@Ag@EeBSeIUiKgA}`@i@yRcAi^cAw_@QaGq@gVSeHEsBYeKEaAMcFOqFCu@S}HiA{c@_@aNu@eZI{CYmJWsJEeA}@m]oBsu@u@eYaBin@KmDUiJaHn@qGn@VrJD~Ax@h[PbG",
+        "summary": {
+          "length": 0.825,
+          "time": 161.685
+        },
+        "maneuvers": [
+          {
+            "type": 2,
+            "instruction": "Drive south on Pariser Platz.",
+            "length": 0.017,
+            "time": 6.327,
+            "begin_shape_index": 0,
+            "end_shape_index": 2
+          },
+          {
+            "type": 15,
+            "instruction": "Turn left to stay on Pariser Platz.",
+            "length": 0.721,
+            "time": 132.268,
+            "begin_shape_index": 2,
+            "end_shape_index": 37
+          },
+          {
+            "type": 15,
+            "instruction": "Turn left onto Friedrichstra\u00dfe.",
+            "length": 0.031,
+            "time": 9.934,
+            "begin_shape_index": 37,
+            "end_shape_index": 39
+          },
+          {
+            "type": 15,
+            "instruction": "Turn left onto Unter den Linden/B 2/B 5.",
+            "length": 0.055,
+            "time": 13.154,
+            "begin_shape_index": 39,
+            "end_shape_index": 43
+          },
+          {
+            "type": 6,
+            "instruction": "Your destination is on the left.",
+            "length": 0.0,
+            "time": 0.0,
+            "begin_shape_index": 43,
+            "end_shape_index": 43
+          }
+        ]
+      },
+      {
+        "shape": "kmkdcB}kcpXD`BZrLvA~i@`Cl}@FpCXfKhC]nC_@nAQfEk@WsJEeA}@m]oBsu@u@eYaBin@KmDUiJUkICkAmAud@m@eU_Ao]I}COwFQiGCkAkAqa@eAu_@aAq]GoB_Ao\\I}ASoB[cBc@mBg@mCYiBQeBG_AIqAKaDuAyg@aBwm@IkDSyHMaF{Ayk@OmGCy@SyHoCmeAaAi_@SaHKmEwAgm@i@qNSkC[kDc@cD}@_GcAqFmAyFsA_FwDyMmGwU{AeFkJ{[iHaWkFeSyDeNkO}h@sE_OuC_IiS_g@_D}H}U{k@s@_BcC_G}D_J{E|FIHu@jAOTiF~Ha@l@}A~ByHhLoC|D{GvJiG~IaMpQmOxT{@z@wDvEfA`FXrAz@pDpA|Fh@~BnErRzEvS`Ip]dFrTzAxGJrA??",
+        "summary": {
+          "length": 1.941,
+          "time": 289.06
+        },
+        "maneuvers": [
+          {
+            "type": 3,
+            "instruction": "Drive west on Unter den Linden/B 2/B 5.",
+            "length": 0.151,
+            "time": 20.924,
+            "begin_shape_index": 0,
+            "end_shape_index": 6
+          },
+          {
+            "type": 15,
+            "instruction": "Turn left onto Glinkastra\u00dfe/B 5.",
+            "length": 0.032,
+            "time": 10.059,
+            "begin_shape_index": 6,
+            "end_shape_index": 10
+          },
+          {
+            "type": 15,
+            "instruction": "Turn left onto Unter den Linden/B 2/B 5. Continue on B 2/B 5.",
+            "length": 1.389,
+            "time": 197.892,
+            "begin_shape_index": 10,
+            "end_shape_index": 80
+          },
+          {
+            "type": 15,
+            "instruction": "Turn left onto Spandauer Stra\u00dfe.",
+            "length": 0.206,
+            "time": 33.193,
+            "begin_shape_index": 80,
+            "end_shape_index": 95
+          },
+          {
+            "type": 15,
+            "instruction": "Turn left onto Anna-Louisa-Karsch-Stra\u00dfe.",
+            "length": 0.163,
+            "time": 26.99,
+            "begin_shape_index": 95,
+            "end_shape_index": 107
+          },
+          {
+            "type": 6,
+            "instruction": "Your destination is on the left.",
+            "length": 0.0,
+            "time": 0.0,
+            "begin_shape_index": 107,
+            "end_shape_index": 107
+          }
+        ]
+      }
+    ]
+  }
+}

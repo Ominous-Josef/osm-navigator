@@ -12,10 +12,18 @@ export interface CameraState {
 
 /** Normalised maneuver kinds, mapped from routing-engine specific codes. */
 export type ManeuverType =
+  | "depart"
   | "straight"
-  | "left"
-  | "right"
   | "slight-left"
   | "slight-right"
+  | "left"
+  | "right"
+  | "sharp-left"
+  | "sharp-right"
+  | "keep-left"
+  | "keep-right"
   | "u-turn"
+  | "merge"
+  | "roundabout"
+  | "ferry"
   | "arrive";

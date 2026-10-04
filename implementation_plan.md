@@ -11,9 +11,9 @@ Status: ✅ done · 🟡 in progress · ⬜ not started. Update this table and t
 | Phase | Status | Commit(s) | Notes |
 |---|---|---|---|
 | 0 — Foundation + SDK 57 | ✅ | `6c1ca67`, follow-up | Checkpoint passed on 2026-10-04. |
-| 1 — Types and package hygiene | ✅ | see Phase 1 checkpoint | Checkpoint passed on 2026-10-04. |
-| 2 — Core service hardening | ⬜ | | Next up. |
-| 3 — Navigation engine | ⬜ | | |
+| 1 — Types and package hygiene | ✅ | `b87d4c6` | Checkpoint passed on 2026-10-04. |
+| 2 — Core service hardening | ✅ | see below | Checkpoint passed on 2026-10-04. |
+| 3 — Navigation engine | ⬜ | | Next up. |
 | 4 — Native map layer | ⬜ | | |
 | 5 — UI components | ⬜ | | |
 | 6 — Example app rebuild | ⬜ | | |
@@ -184,6 +184,28 @@ Fixes audit P1 core services.
   - both clients with mocked `fetch` covering success, HTTP error, timeout, malformed body and multi-leg.
 
 **Verify:** `yarn test` passes, and coverage of `core/src` is at least 90%.
+
+### Phase 2 checkpoint (2026-10-04)
+
+Results:
+- ✅ `yarn test`: **139 tests in 7 suites**, with **100%** statement, branch, function and line coverage of `packages/core/src`. The 90% threshold is enforced in `jest.config.js`.
+- ✅ `yarn typecheck` (now also type-checks the tests via `packages/core/tsconfig.test.json`) and `yarn lint`: 0 errors.
+- ✅ Live check against the public Valhalla and Photon endpoints: `fetchRoute` with a waypoint, `geocode` and `reverseGeocode` all pass, and step indices are consistent with the geometry.
+- ✅ Regression checks: `expo-doctor` passes all 21 checks, and the Android export bundles (1230 modules).
+
+Found during the phase (not in the audit):
+- **Route totals were broken.** Valhalla returns the totals in `trip.summary`, not on `trip`, so `distanceMeters` was `NaN` and `durationSeconds` was `undefined`. The raw types and the code now follow the real response; I checked one against a live request.
+- **Yarn v1 hoisting defect.** After Jest was added, a stale `@babel/traverse` 7.29.0 led to a nested Babel helper set that resolved `lru-cache` v10 instead of v5, which broke Babel under Jest. Fixed with `yarn-deduplicate --scopes @babel` (minor and patch bumps within Babel 7 only).
+
+Decisions:
+- **D4 adjusted:** `core` tests run on plain `babel-jest` in Node, not with the `jest-expo` preset. That preset installs Expo's native runtime globals, including its own `fetch`, which would get in the way of the mocks. `jest-expo` stays the choice for component tests in Phase 5. `babel-preset-expo` is pinned as a root devDep.
+- **`RouteStep.geometryIndex`** was added now, because Phase 3's engine needs precomputed step start indices.
+- **Error types live in `core/src/errors.ts`** and are exported publicly: `OSMNavigatorError` and its subclasses `ConfigError`, `NetworkError`, `TimeoutError`, `AbortError`, `ServiceError` and `InvalidResponseError`. `AbortError` and `ConfigError` were added beyond the plan, so cancellation and bad config can be told apart from failures.
+- **`ManeuverType` is extended** with `depart`, `sharp-*`, `keep-*`, `merge`, `roundabout` and `ferry`. `ManeuverIcon` uses an exhaustive placeholder glyph map until Phase 5.
+
+Known follow-ups:
+- `packages/core/README.md` documents an API that never existed (`osm.valhalla.route`). It gets rewritten in Phase 7.
+- Intermediate `break` waypoints produce a mid-route `arrive` step. Phase 3's engine should latch arrival only at the end of the route.
 
 ---
 

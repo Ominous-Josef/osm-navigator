@@ -1,10 +1,11 @@
 import { getConfig } from "../config";
+import { requestJson } from "../http";
+import { isPhotonResponse } from "./guards";
 import type {
   GeocodeRequest,
   GeocodeResult,
   ReverseGeocodeRequest,
   PhotonFeature,
-  PhotonResponse,
 } from "./types";
 
 function formatAddress(props: PhotonFeature["properties"]): string {
@@ -31,13 +32,24 @@ function featureToResult(feature: PhotonFeature): GeocodeResult {
   };
 }
 
+async function search(path: string, params: URLSearchParams, signal?: AbortSignal) {
+  const { photonEndpoint } = getConfig();
+  const data = await requestJson(
+    `${photonEndpoint}${path}?${params.toString()}`,
+    {},
+    isPhotonResponse,
+    { signal },
+  );
+  return data.features.map(featureToResult);
+}
+
 /**
  * Forward geocode: text query → coordinates.
+ *
+ * @throws {OSMNavigatorError} subclasses from `requestJson`.
  */
 export async function geocode(request: GeocodeRequest): Promise<GeocodeResult[]> {
-  const { photonEndpoint } = getConfig();
-  const { query, limit = 5, locationBias } = request;
-
+  const { query, limit = 5, locationBias, signal } = request;
   const params = new URLSearchParams({ q: query, limit: String(limit) });
 
   if (locationBias) {
@@ -45,39 +57,23 @@ export async function geocode(request: GeocodeRequest): Promise<GeocodeResult[]>
     params.set("lat", String(locationBias[1]));
   }
 
-  const url = `${photonEndpoint}/api?${params.toString()}`;
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    throw new Error(`Photon geocode error ${response.status}`);
-  }
-
-  const data = (await response.json()) as PhotonResponse;
-  return data.features.map(featureToResult);
+  return search("/api", params, signal);
 }
 
 /**
  * Reverse geocode: coordinates → place name/address.
+ *
+ * @throws {OSMNavigatorError} subclasses from `requestJson`.
  */
 export async function reverseGeocode(
   request: ReverseGeocodeRequest
 ): Promise<GeocodeResult[]> {
-  const { photonEndpoint } = getConfig();
-  const { coordinates, limit = 1 } = request;
-
+  const { coordinates, limit = 1, signal } = request;
   const params = new URLSearchParams({
     lon: String(coordinates[0]),
     lat: String(coordinates[1]),
     limit: String(limit),
   });
 
-  const url = `${photonEndpoint}/reverse?${params.toString()}`;
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    throw new Error(`Photon reverse geocode error ${response.status}`);
-  }
-
-  const data = (await response.json()) as PhotonResponse;
-  return data.features.map(featureToResult);
+  return search("/reverse", params, signal);
 }
