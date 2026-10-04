@@ -28,17 +28,17 @@ Facts at decision time (checked against the npm registry, 2026-10-04):
 - **Pros:** no upgrade work up front.
 - **Cons:** adapter built on an unmaintained library line, then rewritten. Type fixes redone for React 19. Building on a two-year-old toolchain.
 
-### Option B — Upgrade before the native-map phase
+### Option B — Upgrade before the native-map work
 - **Pros:** the map adapter is written once.
 - **Cons:** UI type fixes done earlier still get redone against React 19 types. SDK 51 packages are installed only to be thrown away.
 
-### Option C — Upgrade as part of the Phase 0 dependency baseline
+### Option C — Upgrade as part of the initial dependency baseline
 - **Pros:** one install, one set of type fixes, adapter written once against the maintained library. Cheap now, because no native projects are committed (CNG) and the example app is being rebuilt anyway.
 - **Cons:** a large version jump (51 → 57) in one step, so release-note breaking changes must be reviewed rather than discovered gradually.
 
 ## Decision
 
-**Option C.** Re-baseline the monorepo directly on **Expo SDK 57** during Phase 0, using `npx expo install --fix` to align every Expo-managed package to SDK 57 pins. `@maplibre/maplibre-react-native` is adopted at **`11.x`**.
+**Option C.** Re-baseline the monorepo directly on **Expo SDK 57** as the first step of the cleanup, using `npx expo install --fix` to align every Expo-managed package to SDK 57 pins. `@maplibre/maplibre-react-native` is adopted at **`11.x`**.
 
 ## Consequences
 
@@ -46,8 +46,8 @@ Facts at decision time (checked against the npm registry, 2026-10-04):
 - **React 19 patterns:** components take `ref` as a normal prop instead of `React.forwardRef`. JSX types come from the `React.JSX` namespace.
 - **Metro:** SDK 52+ auto-configures monorepos, so the hand-written `watchFolders` / `nodeModulesPaths` overrides are removed unless verification shows they're still needed.
 - **Yarn Classic (v1)** remains the package manager. Hoisted installs are supported by Expo.
-- Release notes for SDKs 52–57 must be reviewed for breaking changes affecting `expo-router`, `expo-location` and `expo-speech`. Findings go into the Phase 0 checkpoint report.
-- The deferred "SDK upgrade" phase is removed from the implementation plan.
+- Release notes for SDKs 52–57 must be reviewed for breaking changes affecting `expo-router`, `expo-location` and `expo-speech` as part of the upgrade.
+- No separate, later "SDK upgrade" step is needed.
 
 ## Revisit when
 
