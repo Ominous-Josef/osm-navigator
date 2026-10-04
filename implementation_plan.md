@@ -14,7 +14,7 @@ Status: ✅ done · 🟡 in progress · ⬜ not started. Update this table and t
 | 1 — Types and package hygiene | ✅ | `aeeef3c` (squashed with the Phase 0 follow-up) | Checkpoint passed on 2026-10-04. |
 | 2 — Core service hardening | ✅ | `e876921` | Checkpoint passed on 2026-10-04. |
 | 3 — Navigation engine | ✅ | `5091ccc` | Checkpoint passed on 2026-10-04. |
-| 4 — Native map layer | ✅ | see Phase 4 checkpoint | Checked on a physical device (Redmi Note 10 Pro, Android 13) on 2026-10-04. |
+| 4 — Native map layer | ✅ | `4005e79` | Checked on a physical device (Redmi Note 10 Pro, Android 13) on 2026-10-04. |
 | 5 — UI components | ⬜ | | Next up. |
 | 6 — Example app rebuild | ⬜ | | |
 | 7 — Tooling and docs | ⬜ | | |
