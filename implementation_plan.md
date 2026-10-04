@@ -13,7 +13,7 @@ Status: ✅ done · 🟡 in progress · ⬜ not started. Update this table and t
 | 0 — Foundation + SDK 57 | ✅ | `6c1ca67`, `aeeef3c` | Checkpoint passed on 2026-10-04. |
 | 1 — Types and package hygiene | ✅ | `aeeef3c` (squashed with the Phase 0 follow-up) | Checkpoint passed on 2026-10-04. |
 | 2 — Core service hardening | ✅ | `e876921` | Checkpoint passed on 2026-10-04. |
-| 3 — Navigation engine | ✅ | see Phase 3 checkpoint | Checkpoint passed on 2026-10-04. |
+| 3 — Navigation engine | ✅ | `5091ccc` | Checkpoint passed on 2026-10-04. |
 | 4 — Native map layer | ⬜ | | Next up. Needs an Android emulator. |
 | 5 — UI components | ⬜ | | |
 | 6 — Example app rebuild | ⬜ | | |
