@@ -65,9 +65,35 @@ export interface MapViewProps {
    * @default "default"
    */
   userLocationMode?: UserLocationMode;
+  /**
+   * A position drawn by the map itself (a dot), e.g. the user snapped onto the route
+   * during navigation, or a simulated position. Independent of `showUserLocation`.
+   */
+  userMarker?: LngLat;
+  /**
+   * Direction the user faces, in degrees clockwise from north. Draws an arrow in the
+   * marker; leave undefined for a plain dot.
+   */
+  userMarkerHeading?: number;
+  /**
+   * Horizontal accuracy of `userMarker` in meters. Draws a circle of that radius on the
+   * ground around it, so a poor fix (e.g. indoors) looks as uncertain as it is.
+   */
+  userMarkerAccuracy?: number;
+  /**
+   * - `"dot"`: a dot with a cone showing where the user faces; for standing or walking.
+   * - `"arrow"`: a navigation arrow; for moving or navigating.
+   * Without `userMarkerHeading` both draw a plain dot.
+   * @default "dot"
+   */
+  userMarkerStyle?: UserMarkerStyle;
+  /** @default routeColor */
+  userMarkerColor?: string;
 }
 
 export type UserLocationMode = "default" | "heading" | "course";
+
+export type UserMarkerStyle = "dot" | "arrow";
 
 export interface MapViewRef {
   animateTo(camera: CameraState, durationMs?: number): void;

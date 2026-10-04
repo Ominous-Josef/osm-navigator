@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "build": "tsc -b",
-    "typecheck": "tsc -b && tsc -p apps/navigation-example && tsc -p packages/core/tsconfig.test.json && tsc -p packages/ui-navigation/tsconfig.test.json",
+    "typecheck": "tsc -b && tsc -p apps/navigation-example && tsc -p apps/navigation-example/tsconfig.test.json && tsc -p packages/core/tsconfig.test.json && tsc -p packages/ui-navigation/tsconfig.test.json",
     "lint": "eslint .",
     "test": "jest",
     "test:coverage": "jest --coverage"

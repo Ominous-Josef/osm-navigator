@@ -16,8 +16,8 @@ Status: ✅ done · 🟡 in progress · ⬜ not started. Update this table and t
 | 3 — Navigation engine | ✅ | `5091ccc` | Checkpoint passed on 2026-10-04. |
 | 4 — Native map layer | ✅ | `4005e79` | Checked on a physical device (Redmi Note 10 Pro, Android 13) on 2026-10-04. |
 | 5 — UI components | ✅ | `501433d` | Checkpoint passed on 2026-10-04; visual review on device. |
-| 6 — Example app rebuild | ⬜ | | Next up. |
-| 7 — Tooling and docs | ⬜ | | |
+| 6 — Example app rebuild | ✅ | see Phase 6 checkpoint | Checked on a physical device (Redmi Note 10 Pro, Android 13) on 2026-10-04. |
+| 7 — Tooling and docs | ⬜ | | Next up. |
 
 ---
 
@@ -403,6 +403,62 @@ Fixes audit P1 #5, #9, #10, #11.
 - Arrival stops tracking and speaks once.
 
 **Verify:** a manual test pass in the emulator using a mocked GPS route (`adb emu geo fix` / a GPX file): start, follow, a forced off-route, arrival, and exit mid-start (the leak check).
+
+### Phase 6 checkpoint (2026-10-04)
+
+Results:
+- ✅ `yarn test`: **351 tests in 24 suites**, with about 99% statement, 96% branch and 100% line coverage across `core`, `ui-navigation` and the app.
+- ✅ `yarn typecheck` (now also type-checks the app and its tests) and `yarn lint`: 0 errors.
+- ✅ Checked on the physical device instead of the emulator: search, start, simulated drive, the HUD, arrival, the new user marker, and indoor behaviour. The user confirmed it looks good.
+
+What was built (`apps/navigation-example/src/`):
+- **`lib/`:**
+  - `errors.ts` turns network, timeout, invalid-response and service errors (including 429) into user-facing messages;
+  - `bearing.ts` holds `bearingDelta` and `smoothBearing`;
+  - `maneuver.ts` provides `upcomingManeuver`;
+  - `location.ts` holds `toFix`, `withTimeout`, `getStartPosition` (with the last-known fallback), the GPS signal quality helpers, `isMoving` and the `steadyFix` drift filter;
+  - `simulate.ts` and `speech.ts`.
+- **`hooks/`:**
+  - `useDestinationSearch`;
+  - `useLocationPermission`, which re-checks when the app becomes active;
+  - `useLocationTracking`, plus the dev-only `useSimulatedLocation`;
+  - `useNavigationSession`:
+    - phases `idle` → `starting` → `navigating` → `arrived`;
+    - spoken prompts, including a reminder 150 m before each turn;
+    - an automatic reroute after 5 s off-route, at most once every 15 s;
+    - aborts its requests on unmount;
+  - `useFollowCamera`;
+  - `useCompassHeading`;
+  - `useGpsSignal`.
+- **`components/`:** `SearchPanel` (permission banner, results, empty and error states, Start with spinner, dev row), `NavigationHUD` (banner with the upcoming maneuver and "Then", off-route banner, steps overlay, footer with progress and Exit, arrival card) and `GpsSignalBanner`.
+- **`app/index.tsx`** composes these. It adds an offline banner (`expo-network`) and centres the map on the user at launch.
+- **Dependencies:** `expo-network`, `expo-system-ui` (fixes the prebuild warning) and `react-native-svg`.
+
+Phase 4 follow-ups resolved:
+- **Camera:** it follows the engine's `snappedPosition` and `routeBearing`, smoothed, and uses the GPS course only when off-route.
+- **The banner now shows the upcoming maneuver,** with the step after it as "Then".
+- **Direction:** the map draws the user itself instead of using the native puck (`native-map`: `userMarker`, `userMarkerHeading`, `userMarkerAccuracy`, `userMarkerStyle`):
+  - **standing:** a dot with a cone pointing where the phone faces (compass);
+  - **navigating or moving:** a Google-style arrow on a white disc, pointing along the route or the GPS course;
+  - the icons are SDF images tinted with the marker colour. `scripts/generate-marker-images.py` generates them and they are inlined as data URIs.
+
+Found on the device:
+- **Indoors, the position couldn't be trusted, and the app didn't notice.** Fixes:
+  - an accuracy circle around the marker;
+  - `GpsSignalBanner`: lost after 15 s without a fix, or poor / weak based on accuracy;
+  - fixes worse than ±50 m are shown but don't drive navigation.
+  - `NavigationEngine.update(position, accuracyMeters?)` (**core API addition**): a fix whose uncertainty still reaches the route doesn't count towards off-route, and progress only advances by more than the uncertainty.
+- **The marker moved while standing still (GPS drift).** Fixes:
+  - `steadyFix` holds the displayed position until a fix lands outside its uncertainty;
+  - "moving" requires speed, a course and an accuracy of ±20 m or better.
+- **`` `id` cannot be changed``:** marker layers that come and go needed React `key`s.
+- **"Invalid geometry in line layer":** the route is now de-duplicated before drawing.
+
+Notes for Phase 7:
+- **Routing and search are tied to Valhalla and Photon** (`Route.raw` is typed as Valhalla, `GeocodeResult.raw` as Photon).
+  - Other sources (e.g. Google) can still feed `NavigationEngine` by converting to `Route`.
+  - A provider interface would make this clean. The README should mention it, along with the caveat that Google Maps Platform terms restrict showing Google content on non-Google maps.
+- **On Android, `expo-location` already uses Google Play Services' fused location provider.**
 
 ---
 

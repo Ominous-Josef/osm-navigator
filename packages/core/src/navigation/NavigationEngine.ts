@@ -109,16 +109,25 @@ export class NavigationEngine {
     return this.current;
   }
 
-  /** Process a GPS fix and return the new state. */
-  update(position: LngLat): NavigationState {
+  /**
+   * Process a GPS fix and return the new state.
+   *
+   * @param accuracyMeters The fix's horizontal accuracy, when known. A fix whose
+   *   uncertainty still reaches the route (typical indoors or in urban canyons) doesn't
+   *   count towards going off-route, and progress only moves forward by more than the
+   *   uncertainty, so a standing user's GPS drift doesn't creep them along the route.
+   */
+  update(position: LngLat, accuracyMeters?: number): NavigationState {
     const previous = this.current;
     if (previous.isArrived) return previous;
 
     const { offRouteThresholdMeters, onRouteThresholdMeters, offRouteConfirmations } = this.thresholds;
     const match = this.match(position);
+    const accuracy = accuracyMeters !== undefined && Number.isFinite(accuracyMeters) ? accuracyMeters : 0;
+    const offRouteLimit = Math.max(offRouteThresholdMeters, accuracy);
 
     let isOffRoute = previous.isOffRoute;
-    if (match.distance > offRouteThresholdMeters) {
+    if (match.distance > offRouteLimit) {
       this.offRouteStreak++;
       if (this.offRouteStreak >= offRouteConfirmations) isOffRoute = true;
     } else {
@@ -127,7 +136,7 @@ export class NavigationEngine {
     }
 
     // Only advance on fixes that plausibly lie on the route, and never backwards.
-    if (match.distance <= offRouteThresholdMeters && match.along > this.progressMeters) {
+    if (match.distance <= offRouteThresholdMeters && match.along > this.progressMeters + accuracy) {
       this.progressMeters = match.along;
       this.segmentIndex = match.segmentIndex;
       this.snapped = match.point;

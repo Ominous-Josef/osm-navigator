@@ -230,6 +230,30 @@ describe("NavigationEngine", () => {
       expect(engine.state.isOffRoute).toBe(false);
     });
 
+    it("doesn't count fixes whose accuracy still reaches the route", () => {
+      const engine = new NavigationEngine(straight(), { offRouteConfirmations: 1 });
+      engine.update(at(100, 0));
+      // 50 m off, but ±60 m: could be on the road (e.g. indoors next to it).
+      expect(engine.update(at(120, 50), 60).isOffRoute).toBe(false);
+      // A tighter fix at the same spot is off-route.
+      expect(engine.update(at(130, 50), 5).isOffRoute).toBe(true);
+      // Accuracy never lowers the threshold, and junk values are ignored.
+      expect(new NavigationEngine(straight(), { offRouteConfirmations: 1 }).update(at(100, 25), 3).isOffRoute).toBe(false);
+      expect(new NavigationEngine(straight(), { offRouteConfirmations: 1 }).update(at(100, 50), NaN).isOffRoute).toBe(true);
+    });
+
+    it("doesn't creep forward on drift smaller than the fix's accuracy", () => {
+      const engine = new NavigationEngine(straight());
+      engine.update(at(100, 0), 10);
+      // Standing still: fixes scatter up to ±10 m around x = 100.
+      for (const x of [108, 95, 109, 104]) engine.update(at(x, 3), 10);
+      expect(engine.state.distanceRemainingMeters).toBeCloseTo(900, 0);
+      // Real movement beyond the uncertainty advances.
+      expect(engine.update(at(115, 0), 10).distanceRemainingMeters).toBeCloseTo(885, 0);
+      // Without an accuracy every forward fix counts.
+      expect(engine.update(at(116, 0)).distanceRemainingMeters).toBeCloseTo(884, 0);
+    });
+
     it("does not arrive while off-route", () => {
       const engine = new NavigationEngine(straight(), { offRouteConfirmations: 1 });
       const s = engine.update(at(1000, 25.5 + 10));
