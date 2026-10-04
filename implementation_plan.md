@@ -13,8 +13,8 @@ Status: ✅ done · 🟡 in progress · ⬜ not started. Update this table and t
 | 0 — Foundation + SDK 57 | ✅ | `6c1ca67`, `aeeef3c` | Checkpoint passed on 2026-10-04. |
 | 1 — Types and package hygiene | ✅ | `aeeef3c` (squashed with the Phase 0 follow-up) | Checkpoint passed on 2026-10-04. |
 | 2 — Core service hardening | ✅ | `e876921` | Checkpoint passed on 2026-10-04. |
-| 3 — Navigation engine | ⬜ | | Next up. |
-| 4 — Native map layer | ⬜ | | |
+| 3 — Navigation engine | ✅ | see Phase 3 checkpoint | Checkpoint passed on 2026-10-04. |
+| 4 — Native map layer | ⬜ | | Next up. Needs an Android emulator. |
 | 5 — UI components | ⬜ | | |
 | 6 — Example app rebuild | ⬜ | | |
 | 7 — Tooling and docs | ⬜ | | |
@@ -226,6 +226,44 @@ Fixes audit P1 #6, #7, #8.
 - **Tests:** synthetic routes (straight, L-turn, loop-back, overlapping), GPS jitter, arrival latch, off-route.
 
 **Verify:** engine tests pass. Each loop-back and overlap scenario test asserts that progress never moves backward.
+
+### Phase 3 checkpoint (2026-10-04)
+
+Results:
+- ✅ `yarn test`: **179 tests in 9 suites**, with 100% statement, branch, function and line coverage of `packages/core/src`.
+- ✅ The scenarios each assert their own guarantee:
+  - **straight route:** snapping and along-route distances;
+  - **L-turn:** distance to the turn measured along the road, and `onStepChange` fires once;
+  - **out-and-back:** progress never decreases, and the same point reads 400 m on the way out and 600 m on the way back;
+  - **self-crossing route** (with a 5 km look-ahead): the earlier pass wins;
+  - **look-ahead window:** fixes beyond it don't snap;
+  - **GPS jitter:** lateral plus backward noise keeps progress monotonic, with no off-route and no step flapping;
+  - **off-route:** the 3-fix confirmation, hysteresis between 15 m and 30 m, a single spike ignored, and no arrival while off-route;
+  - **arrival:** latched, `onArrive` fires once, and later fixes return the same state object;
+  - **off-road destination;** a route that passes near its destination early doesn't end early;
+  - **the real two-leg Valhalla fixture:** walked end to end, step changes stay in order, and the first leg's `arrive` doesn't latch arrival;
+  - **degenerate routes:** no steps, a single point, no geometry, and invalid options.
+- ✅ `yarn typecheck` and `yarn lint`: 0 errors. The Android export bundles (1233 modules).
+
+What was built:
+- **`core/src/geo/`:** `haversineDistance`, `bearing`, `projectOntoSegment` (a local equirectangular projection) and `cumulativeDistances`.
+- **`core/src/navigation/`:** the `NavigationEngine` class and the `NavigationState` / `NavigationEngineOptions` types. `ui-navigation` now re-exports `NavigationState` from core.
+- **`NavigationState` gained** `distanceRemainingMeters`, `progress`, `isOffRoute`, `snappedPosition`, `distanceFromRouteMeters` and `routeBearing`.
+- **Defaults:**
+
+  | Option | Default |
+  |---|---|
+  | off-route threshold | 30 m |
+  | on-route threshold | 15 m |
+  | off-route confirmations | 3 fixes |
+  | arrival threshold | 20 m |
+  | look-ahead | 500 m |
+  | tie tolerance between candidate segments (earlier wins) | 3 m |
+
+Decisions:
+- **One callback for off-route: `onOffRouteChange(isOffRoute, state)`.** It replaces the planned `onOffRoute` and covers both leaving and rejoining the route. Rerouting stays the app's decision.
+- **Arrival needs the fix itself to be near the route,** or near the destination once it's within the look-ahead. Tests caught a short-route false arrival without this.
+- **The app screen isn't wired to the engine yet.** That happens in Phase 6 (`useNavigationSession`), so the old geo helpers stay in `app/index.tsx` until then.
 
 ---
 

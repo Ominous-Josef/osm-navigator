@@ -6,7 +6,7 @@ export class OSMNavigatorError extends Error {
   }
 }
 
-/** Invalid value passed to `initOSMNavigator`. */
+/** Invalid value passed to `initOSMNavigator` or another SDK constructor. */
 export class ConfigError extends OSMNavigatorError {}
 
 /** The request never got a response (offline, DNS failure, connection reset…). */
