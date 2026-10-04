@@ -17,7 +17,7 @@ Status: ✅ done · 🟡 in progress · ⬜ not started. Update this table and t
 | 4 — Native map layer | ✅ | `4005e79` | Checked on a physical device (Redmi Note 10 Pro, Android 13) on 2026-10-04. |
 | 5 — UI components | ✅ | `501433d` | Checkpoint passed on 2026-10-04; visual review on device. |
 | 6 — Example app rebuild | ✅ | `8badd81` | Checked on a physical device (Redmi Note 10 Pro, Android 13) on 2026-10-04. |
-| 7 — Tooling and docs | ✅ | see Phase 7 checkpoint | Checkpoint passed on 2026-10-04; first GitHub CI run pending a push. |
+| 7 — Tooling and docs | ✅ | `906a9c5` | Checkpoint passed on 2026-10-04; first GitHub CI run pending a push. |
 
 ---
 
