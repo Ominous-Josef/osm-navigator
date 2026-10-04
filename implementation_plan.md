@@ -17,7 +17,7 @@ Status: ✅ done · 🟡 in progress · ⬜ not started. Update this table and t
 | 4 — Native map layer | ✅ | `4005e79` | Checked on a physical device (Redmi Note 10 Pro, Android 13) on 2026-10-04. |
 | 5 — UI components | ✅ | `501433d` | Checkpoint passed on 2026-10-04; visual review on device. |
 | 6 — Example app rebuild | ✅ | `8badd81` | Checked on a physical device (Redmi Note 10 Pro, Android 13) on 2026-10-04. |
-| 7 — Tooling and docs | ⬜ | | Next up. |
+| 7 — Tooling and docs | ✅ | see Phase 7 checkpoint | Checkpoint passed on 2026-10-04; first GitHub CI run pending a push. |
 
 ---
 
@@ -469,6 +469,30 @@ Notes for Phase 7:
 - Per-package READMEs updated to match the new APIs.
 
 **Verify:** CI is green on a test branch.
+
+### Phase 7 checkpoint (2026-10-04)
+
+Results:
+- ✅ **CI workflow** ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)):
+  - runs on pull requests and on pushes to `main`;
+  - steps: checkout → Node 24 → Corepack (Yarn 1.22.22) → cached `yarn install --frozen-lockfile` → `yarn typecheck` → `yarn lint` → `yarn test:coverage --ci` (enforces the 90% threshold);
+  - read-only permissions, a 15-minute timeout, and a newer push cancels the run in progress;
+  - no native build.
+- ✅ **Simulated locally:** a fresh clone of the branch passes every CI step (351 tests, about 99% statement and 96% branch coverage), so nothing relies on local leftovers such as built `dist/` folders or untracked files.
+- ⏳ **Still pending: a green run on GitHub itself.** It needs a push, which the user does.
+
+Docs:
+- **Root README rewritten:**
+  - an honest status (Android tested on a device, iOS not yet tested, not on npm);
+  - a package table, an architecture diagram and a quick-look code sample;
+  - requirements (dev build, Expo Go not supported, JDK note), getting started, the simulate and gallery dev tools, and dev commands;
+  - CI, the ADR links, and a fair-use section for the public endpoints (`userAgent`, debouncing, self-hosting);
+  - other providers, including the caveat on Google's terms;
+  - a refreshed roadmap, attribution and licence.
+- **Per-package READMEs now match the real APIs.** They previously described APIs that don't exist.
+  - **`core`:** config, search, routing, `NavigationEngine` (options, `update(position, accuracy)`, a `NavigationState` table), errors and utilities.
+  - **`native-map`:** installation (plugin, dev build), a props table including the user marker, the ref methods, attribution, and the icon generator.
+  - **`ui-navigation`:** components, theming and formatting.
 
 ---
 
