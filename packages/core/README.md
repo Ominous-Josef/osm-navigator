@@ -33,4 +33,4 @@ const results = await osm.photon.search({ q: "Berlin" });
 - All props and types are explicit, strict mode enabled.
 
 ## License
-MIT
+GPL-3.0-or-later — see the [root LICENSE](../../LICENSE).

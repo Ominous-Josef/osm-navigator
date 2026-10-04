@@ -106,11 +106,25 @@ We welcome contributions! Please feel free to open issues or submit pull request
 4. Push to the branch (`git push origin feature/amazing-feature`).
 5. Open a Pull Request.
 
+### AI Assistance
+
+Parts of this project are developed with AI assistance ([Claude Code](https://claude.com/claude-code)). Commits produced this way carry a `Co-Authored-By: Claude` trailer, and every change is reviewed by a human maintainer before it lands. Contributors may use AI tools too; please disclose substantial AI-generated contributions in your pull request description.
+
+---
+
+## 🗺️ Data & Attribution
+
+Map data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), available under the [Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/). Default tiles are served by [OpenFreeMap](https://openfreemap.org/); routing by [Valhalla](https://github.com/valhalla/valhalla) and geocoding by [Photon](https://github.com/komoot/photon), both of which use OpenStreetMap data.
+
+If you ship an app built with OSM Navigator, you must display "© OpenStreetMap contributors" visibly on the map, per the [OSM attribution guidelines](https://osmfoundation.org/wiki/Licence/Attribution_Guidelines). Other tile or data providers you configure may have additional attribution requirements.
+
 ---
 
 ## 📝 License
 
-This project is licensed under the MIT License - see each package for specific details.
+Copyright (C) 2026 Josef
+
+This project is licensed under the [GNU General Public License v3.0 or later](./LICENSE) (`GPL-3.0-or-later`). Applies to all packages and the example app in this repository.
 
 ---
 

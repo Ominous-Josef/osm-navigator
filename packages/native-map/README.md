@@ -28,4 +28,4 @@ import { MapView } from "@osm-navigator/native-map";
 - TODO(agent): Wire up imperative ref commands to native module (Fabric/TurboModules)
 
 ## License
-MIT
+GPL-3.0-or-later — see the [root LICENSE](../../LICENSE).

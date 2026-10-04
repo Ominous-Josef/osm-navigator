@@ -1,6 +1,7 @@
 {
   "name": "@osm-navigator/native-map",
   "version": "0.1.0",
+  "license": "GPL-3.0-or-later",
   "description": "Native MapLibre wrapper for OSM Navigator",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

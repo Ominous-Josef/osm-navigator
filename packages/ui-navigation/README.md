@@ -19,4 +19,4 @@ import { TurnByTurnOverlay, ManeuverIcon, RouteProgressBar } from "@osm-navigato
 - All props and types are explicit, strict mode enabled.
 
 ## License
-MIT
+GPL-3.0-or-later — see the [root LICENSE](../../LICENSE).
