@@ -15,7 +15,7 @@ Status: ✅ done · 🟡 in progress · ⬜ not started. Update this table and t
 | 2 — Core service hardening | ✅ | `e876921` | Checkpoint passed on 2026-10-04. |
 | 3 — Navigation engine | ✅ | `5091ccc` | Checkpoint passed on 2026-10-04. |
 | 4 — Native map layer | ✅ | `4005e79` | Checked on a physical device (Redmi Note 10 Pro, Android 13) on 2026-10-04. |
-| 5 — UI components | ✅ | see Phase 5 checkpoint | Checkpoint passed on 2026-10-04; visual review on device. |
+| 5 — UI components | ✅ | `501433d` | Checkpoint passed on 2026-10-04; visual review on device. |
 | 6 — Example app rebuild | ⬜ | | Next up. |
 | 7 — Tooling and docs | ⬜ | | |
 
