@@ -14,8 +14,8 @@ Status: ✅ done · 🟡 in progress · ⬜ not started. Update this table and t
 | 1 — Types and package hygiene | ✅ | `aeeef3c` (squashed with the Phase 0 follow-up) | Checkpoint passed on 2026-10-04. |
 | 2 — Core service hardening | ✅ | `e876921` | Checkpoint passed on 2026-10-04. |
 | 3 — Navigation engine | ✅ | `5091ccc` | Checkpoint passed on 2026-10-04. |
-| 4 — Native map layer | ⬜ | | Next up. Needs an Android emulator. |
-| 5 — UI components | ⬜ | | |
+| 4 — Native map layer | ✅ | see Phase 4 checkpoint | Checked on a physical device (Redmi Note 10 Pro, Android 13) on 2026-10-04. |
+| 5 — UI components | ⬜ | | Next up. |
 | 6 — Example app rebuild | ⬜ | | |
 | 7 — Tooling and docs | ⬜ | | |
 
@@ -284,6 +284,39 @@ Option-specific:
 The config plugin either gets rewritten to set location permission strings (iOS `NSLocationWhenInUseUsageDescription`, Android permissions), or deleted in favour of the `expo-location` plugin. **I recommend deleting it** to avoid duplicating what expo-location already does.
 
 **Verify:** a dev build runs on an Android emulator. The map renders, a press sets a destination, the route draws, and `animateTo` works.
+
+### Phase 4 checkpoint (2026-10-04)
+
+The device check ran on a **physical device** (Redmi Note 10 Pro, arm64, Android 13) instead of the emulator:
+- ✅ The map renders: the OpenFreeMap Liberty style, the MapLibre logo and the attribution control.
+- ✅ A press sets a destination.
+- ✅ `animateTo`: choosing a search result moves the camera to it.
+- ✅ The route draws as a line layer, and the controlled camera follows the user, tilted.
+- ✅ The native user-location puck shows.
+- ✅ Bonus: a route over Valhalla's 1500 km limit fails with a readable `ServiceError` alert.
+- ✅ `yarn typecheck`, `yarn lint` and `yarn test` (179 tests) all pass.
+
+What was built:
+- **`native-map` is an adapter over `@maplibre/maplibre-react-native` 11.4.1** (ADR 0001):
+  - `Map`, `Camera`, `GeoJSONSource` + a line `Layer`, and `NativeUserLocation`;
+  - `ref` via `useImperativeHandle`: `animateTo` → `easeTo`, `fitBounds`, and `takeSnapshot` → `createStaticMapImage`;
+  - events: `onPress`, `onLongPress`, `onCameraChange`, `onMapLoaded`, and the new `onMapError`;
+  - the default style comes from `getConfig().mapStyleURL`.
+- **New props:** `cameraAnimationDurationMs`, `routeColor`, `routeWidth` and `userLocationMode` (`default` | `heading` | `course`).
+- **Removed:** the no-op `app.plugin.js`, `README.plugin.md` and the `expo-modules-core` native-view stub.
+- **Plugins:** `@maplibre/maplibre-react-native` and `expo-location` (with a `locationWhenInUsePermission` string) are now in the app's plugins.
+- **Dependencies:** MapLibre is a direct dependency of the app (needed for native autolinking) and a peer dependency of `native-map`.
+
+Found on the device:
+- **The puck arrow looked wrong when turning.** The adapter hard-coded `mode="course"` (GPS direction of travel), which freezes when stationary and is noisy on foot. The puck mode is now a prop, and the example app uses `"heading"` (compass).
+- **The camera rotation is noisy.** The old screen code computes the bearing between consecutive raw GPS fixes. **Phase 6** should drive the camera from `NavigationEngine`'s snapped `routeBearing`.
+- **Expo Go can't run this app.** It has no MapLibre native code (`MLRNCameraModule could not be found`), so the dev build has to be used.
+
+Build notes:
+- Use Android Studio's JDK 21 (`JAVA_HOME=/opt/android-studio/jbr`). The system JDK is 25.
+- The first native build downloads several hundred MB from Google's Maven and Maven Central. On a slow link, Gradle looks hung during this; `--info` shows the downloads.
+- Wireless ADB can drop mid-install. MIUI also blocks `adb shell input` unless "USB debugging (Security settings)" is enabled.
+- `expo prebuild` warns that `userInterfaceStyle` needs `expo-system-ui`. Phase 6 should add it.
 
 ---
 

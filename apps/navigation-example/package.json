@@ -11,6 +11,7 @@
     "prebuild": "expo prebuild --clean"
   },
   "dependencies": {
+    "@maplibre/maplibre-react-native": "~11.4.1",
     "@osm-navigator/core": "*",
     "@osm-navigator/native-map": "*",
     "@osm-navigator/ui-navigation": "*",

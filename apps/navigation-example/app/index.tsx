@@ -1,5 +1,5 @@
 import { fetchRoute, geocode, GeocodeResult, LngLat, Route, toErrorMessage } from '@osm-navigator/core';
-import { MapView } from '@osm-navigator/native-map';
+import { MapView, MapViewRef } from '@osm-navigator/native-map';
 import { NavigationBanner } from '@osm-navigator/ui-navigation';
 import * as Location from 'expo-location';
 import * as Speech from 'expo-speech';
@@ -89,6 +89,7 @@ export default function App() {
   const [searchError, setSearchError] = useState<string | null>(null);
 
   // Refs
+  const mapRef = useRef<MapViewRef>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const locationSubRef = useRef<Location.LocationSubscription | null>(null);
   const prevPositionRef = useRef<LngLat | undefined>(undefined);
@@ -147,6 +148,10 @@ export default function App() {
 
   const selectResult = (item: GeocodeResult) => {
     setDestination(item.coordinates);
+    mapRef.current?.animateTo(
+      { longitude: item.coordinates[0], latitude: item.coordinates[1], zoom: 15 },
+      800,
+    );
     setDestQuery(item.name);
     setResults([]);
     setSearchError(null);
@@ -290,6 +295,7 @@ export default function App() {
   return (
     <View style={styles.container}>
       <MapView
+        ref={mapRef}
         style={styles.map}
         initialCamera={{
           latitude: BERLIN_CENTER[1],
@@ -310,6 +316,7 @@ export default function App() {
         }}
         route={routeData?.geometry}
         showUserLocation={showUserLocation}
+        userLocationMode="heading"
       />
 
       {!isNavigating ? (

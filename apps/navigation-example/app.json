@@ -17,9 +17,15 @@
     },
     "scheme": "osm-navigation-example",
     "plugins": [
-      "../../app.plugin.js",
       "expo-router",
-      "expo-status-bar"
+      "expo-status-bar",
+      "@maplibre/maplibre-react-native",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "OSM Navigation Example uses your location to show where you are on the map and guide you along your route."
+        }
+      ]
     ]
   }
 }
