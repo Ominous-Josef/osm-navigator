@@ -1,7 +1,0 @@
-{
-  "compilerOptions": {
-    "composite": true,
-    "ignoreDeprecations": "6.0"
-  },
-  "extends": "expo/tsconfig.base"
-}

@@ -18,7 +18,8 @@
     "scheme": "osm-navigation-example",
     "plugins": [
       "../../app.plugin.js",
-      "expo-router"
+      "expo-router",
+      "expo-status-bar"
     ]
   }
 }
