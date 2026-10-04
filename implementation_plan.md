@@ -10,9 +10,9 @@ Status: ✅ done · 🟡 in progress · ⬜ not started. Update this table and t
 
 | Phase | Status | Commit(s) | Notes |
 |---|---|---|---|
-| 0 — Foundation + SDK 57 | ✅ | `6c1ca67`, follow-up | Checkpoint passed on 2026-10-04. |
-| 1 — Types and package hygiene | ✅ | `b87d4c6` | Checkpoint passed on 2026-10-04. |
-| 2 — Core service hardening | ✅ | see below | Checkpoint passed on 2026-10-04. |
+| 0 — Foundation + SDK 57 | ✅ | `6c1ca67`, `aeeef3c` | Checkpoint passed on 2026-10-04. |
+| 1 — Types and package hygiene | ✅ | `aeeef3c` (squashed with the Phase 0 follow-up) | Checkpoint passed on 2026-10-04. |
+| 2 — Core service hardening | ✅ | `e876921` | Checkpoint passed on 2026-10-04. |
 | 3 — Navigation engine | ⬜ | | Next up. |
 | 4 — Native map layer | ⬜ | | |
 | 5 — UI components | ⬜ | | |
