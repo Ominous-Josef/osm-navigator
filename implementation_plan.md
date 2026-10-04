@@ -16,7 +16,7 @@ Status: ✅ done · 🟡 in progress · ⬜ not started. Update this table and t
 | 3 — Navigation engine | ✅ | `5091ccc` | Checkpoint passed on 2026-10-04. |
 | 4 — Native map layer | ✅ | `4005e79` | Checked on a physical device (Redmi Note 10 Pro, Android 13) on 2026-10-04. |
 | 5 — UI components | ✅ | `501433d` | Checkpoint passed on 2026-10-04; visual review on device. |
-| 6 — Example app rebuild | ✅ | see Phase 6 checkpoint | Checked on a physical device (Redmi Note 10 Pro, Android 13) on 2026-10-04. |
+| 6 — Example app rebuild | ✅ | `8badd81` | Checked on a physical device (Redmi Note 10 Pro, Android 13) on 2026-10-04. |
 | 7 — Tooling and docs | ⬜ | | Next up. |
 
 ---
