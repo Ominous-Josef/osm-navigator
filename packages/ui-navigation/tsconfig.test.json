@@ -1,9 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "src",
-    "composite": true
+    "noEmit": true,
+    "types": [
+      "jest"
+    ]
   },
   "include": [
     "src"
@@ -12,8 +13,5 @@
     {
       "path": "../core"
     }
-  ],
-  "exclude": [
-    "src/**/__tests__"
   ]
 }

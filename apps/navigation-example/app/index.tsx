@@ -1,6 +1,7 @@
 import { fetchRoute, geocode, GeocodeResult, LngLat, Route, toErrorMessage } from '@osm-navigator/core';
 import { MapView, MapViewRef } from '@osm-navigator/native-map';
 import { NavigationBanner } from '@osm-navigator/ui-navigation';
+import { Link } from 'expo-router';
 import * as Location from 'expo-location';
 import * as Speech from 'expo-speech';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -322,6 +323,11 @@ export default function App() {
       {!isNavigating ? (
         <View style={styles.searchPanel}>
           <Text style={styles.title}>🧭 OSM Navigation</Text>
+          {__DEV__ && (
+            <Link href="/gallery" style={styles.devLink}>
+              Component gallery →
+            </Link>
+          )}
 
           {locationDenied && (
             <Text style={styles.warningText}>
@@ -394,6 +400,12 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  devLink: {
+    alignSelf: 'center',
+    color: '#0A84FF',
+    fontSize: 13,
+    marginBottom: 8,
+  },
   container: {
     flex: 1,
     backgroundColor: '#000',

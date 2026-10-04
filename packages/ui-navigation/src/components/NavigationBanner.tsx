@@ -1,104 +1,95 @@
-import type { FC } from 'react';
-import { StyleSheet, View, Text, ViewProps } from 'react-native';
-import { ManeuverIcon, ManeuverType } from './ManeuverIcons';
+import { StyleSheet, Text, View, type ViewProps } from 'react-native';
+import { formatDistance, type Units } from '../format';
+import { useNavigationTheme } from '../theme';
+import { ManeuverIcon, type ManeuverType } from './ManeuverIcons';
 
 export interface NavigationBannerProps extends ViewProps {
+  /** Instruction for the upcoming maneuver. */
   instruction: string;
-  distanceToManeuver: number; // in meters
+  /** Along-route distance to the upcoming maneuver, in meters. */
+  distanceToManeuver: number;
   maneuverType: ManeuverType;
+  /** Instruction for the maneuver after that, shown as "Then". */
   nextInstruction?: string;
+  /** @default "metric" */
+  units?: Units;
+  locale?: string;
 }
 
-export const NavigationBanner: FC<NavigationBannerProps> = ({
+export function NavigationBanner({
   instruction,
   distanceToManeuver,
   maneuverType,
   nextInstruction,
+  units = 'metric',
+  locale,
   style,
   ...props
-}) => {
-  const formatDistance = (m: number) => {
-    if (m >= 1000) return `${(m / 1000).toFixed(1)} km`;
-    return `${Math.round(m)} m`;
-  };
+}: NavigationBannerProps) {
+  const { colors, spacing, radii, typography } = useNavigationTheme();
+  const distance = formatDistance(distanceToManeuver, units, locale);
 
   return (
-    <View style={[styles.container, style]} {...props}>
-      <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <ManeuverIcon type={maneuverType} size={48} color="#fff" />
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.lg, shadowColor: colors.shadow },
+        style,
+      ]}
+      accessible
+      accessibilityRole="summary"
+      accessibilityLabel={`In ${distance}, ${instruction}${nextInstruction ? `. Then ${nextInstruction}` : ''}`}
+      accessibilityLiveRegion="polite"
+      {...props}
+    >
+      <View style={styles.row}>
+        <View
+          style={[
+            styles.iconTile,
+            { backgroundColor: colors.surfaceRaised, borderRadius: radii.md, marginRight: spacing.lg },
+          ]}
+        >
+          <ManeuverIcon type={maneuverType} size={44} color={colors.textPrimary} />
         </View>
-        <View style={styles.textContainer}>
-          <Text style={styles.distanceText}>{formatDistance(distanceToManeuver)}</Text>
-          <Text style={styles.instructionText} numberOfLines={2}>
+        <View style={styles.text}>
+          <Text style={[typography.distance, { color: colors.accent }]} numberOfLines={1}>
+            {distance}
+          </Text>
+          <Text
+            style={[typography.instruction, { color: colors.textPrimary, marginTop: 2 }]}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
             {instruction}
           </Text>
         </View>
       </View>
-      {nextInstruction && (
-        <View style={styles.nextContainer}>
-          <Text style={styles.nextLabel}>THEN: </Text>
-          <Text style={styles.nextText} numberOfLines={1}>{nextInstruction}</Text>
+      {nextInstruction ? (
+        <View
+          style={[
+            styles.next,
+            { borderTopColor: colors.border, marginTop: spacing.md, paddingTop: spacing.md },
+          ]}
+        >
+          <Text style={[typography.caption, { color: colors.textMuted }]}>THEN </Text>
+          <Text style={[typography.body, styles.text, { color: colors.textSecondary }]} numberOfLines={1}>
+            {nextInstruction}
+          </Text>
         </View>
-      )}
+      ) : null}
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#1C1C1E',
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 10,
   },
-  content: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconContainer: {
-    width: 64,
-    height: 64,
-    backgroundColor: '#2C2C2E',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  textContainer: {
-    flex: 1,
-  },
-  distanceText: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#0A84FF',
-  },
-  instructionText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginTop: 2,
-  },
-  nextContainer: {
-    flexDirection: 'row',
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#3A3A3C',
-    alignItems: 'center',
-  },
-  nextLabel: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#8E8E93',
-  },
-  nextText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#AEAEB2',
-  },
+  row: { flexDirection: 'row', alignItems: 'center' },
+  iconTile: { width: 64, height: 64, justifyContent: 'center', alignItems: 'center' },
+  text: { flex: 1, minWidth: 0 },
+  next: { flexDirection: 'row', alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth },
 });

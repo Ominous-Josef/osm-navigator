@@ -15,8 +15,8 @@ Status: ✅ done · 🟡 in progress · ⬜ not started. Update this table and t
 | 2 — Core service hardening | ✅ | `e876921` | Checkpoint passed on 2026-10-04. |
 | 3 — Navigation engine | ✅ | `5091ccc` | Checkpoint passed on 2026-10-04. |
 | 4 — Native map layer | ✅ | `4005e79` | Checked on a physical device (Redmi Note 10 Pro, Android 13) on 2026-10-04. |
-| 5 — UI components | ⬜ | | Next up. |
-| 6 — Example app rebuild | ⬜ | | |
+| 5 — UI components | ✅ | see Phase 5 checkpoint | Checkpoint passed on 2026-10-04; visual review on device. |
+| 6 — Example app rebuild | ⬜ | | Next up. |
 | 7 — Tooling and docs | ⬜ | | |
 
 ---
@@ -310,6 +310,14 @@ What was built:
 Found on the device:
 - **The puck arrow looked wrong when turning.** The adapter hard-coded `mode="course"` (GPS direction of travel), which freezes when stationary and is noisy on foot. The puck mode is now a prop, and the example app uses `"heading"` (compass).
 - **The camera rotation is noisy.** The old screen code computes the bearing between consecutive raw GPS fixes. **Phase 6** should drive the camera from `NavigationEngine`'s snapped `routeBearing`.
+- **Direction accuracy is still not good enough (user feedback after the `heading` fix).** Phase 6 must:
+  - drive the camera bearing from `NavigationEngine.routeBearing` instead of raw GPS fixes;
+  - show the puck at the engine's `snappedPosition` while on route;
+  - pick `course` above walking speed (the GPS course is reliable there) and `heading` below it;
+  - smooth the bearing (ignore changes under a few degrees, ease rotations).
+
+  The compass on the device may also need calibrating (figure-8 motion).
+- **The banner shows the wrong step.** The screen passes the *current* step ("Drive south", depart icon) together with the distance to the *next* maneuver. It should show the upcoming maneuver ("93 m · Turn right", right-turn icon), with the step after it as "Then". Fix in Phase 6 when wiring `NavigationState`.
 - **Expo Go can't run this app.** It has no MapLibre native code (`MLRNCameraModule could not be found`), so the dev build has to be used.
 
 Build notes:
@@ -341,6 +349,35 @@ Fixes audit P2 UI.
 - Component tests with `@testing-library/react-native`.
 
 **Verify:** component tests pass, and I review the screens visually in the emulator.
+
+### Phase 5 checkpoint (2026-10-04)
+
+Results:
+- ✅ `yarn test`: **256 tests in 16 suites** (77 new for `ui-navigation`), with **100%** coverage of `core` and `ui-navigation`.
+- ✅ `yarn typecheck` (now also type-checks the `ui-navigation` tests) and `yarn lint`: 0 errors.
+- ✅ Visual review on the physical device, through the new dev-only **component gallery** (`app/gallery.tsx`, linked from the main screen in dev builds). It shows every component and all 15 icons, with dark/light and metric/imperial toggles. The user reviewed it and reported no issues.
+
+What was built:
+- **`theme/`:**
+  - `darkNavigationTheme` (default) and `lightNavigationTheme`, covering colours, spacing, radii and typography;
+  - `NavigationThemeProvider` with per-group partial `overrides`;
+  - `useNavigationTheme()` and `mergeNavigationTheme()`.
+- **`format/`:**
+  - `formatDistance(m, units, locale)` with navigation-style rounding: 5 m / 10 m steps, km or mi with one decimal under 10, feet below 0.1 mi;
+  - `formatDuration(s)`;
+  - the `Units` type.
+- **`ManeuverIcon`:** SVG strokes (D3) for all 15 `ManeuverType`s, with faded branches on forks. It honours `color`, has accessible labels (`maneuverLabel()`), and unknown types fall back to `straight`.
+- **Reworked components:**
+  - `NavigationBanner`: themed, `units`/`locale`, 2-line clamp and a single spoken summary;
+  - `TurnByTurnOverlay`: `units`, `onClose`, a `FlatList` with stable keys, a highlighted current step, past steps dimmed, and an empty state;
+  - `RouteProgressBar`: themed, `progressbar` role with `accessibilityValue`, clamped.
+- **New components:** `OffRouteBanner`, `ArrivalCard` and `ErrorBanner` (`error` / `offline` variants).
+- **Dependencies:** `react-native-svg` 15.15.4 is a peer dependency of `ui-navigation` and a direct dependency of the app (it's native, so this needed a rebuild).
+
+Decisions:
+- **D4 in practice:** `ui-navigation` tests run on the `jest-expo` preset with `@testing-library/react-native` 14 (async `render` / `fireEvent`, on `test-renderer`), while `core` stays on plain Node. A package-local `babel.config.js` serves Jest only.
+- **Banner containers keep `accessibilityRole="alert"` but aren't grouped as one accessible element,** so the Retry, Reroute and Done buttons stay individually focusable.
+- **`TurnByTurnOverlay` doesn't auto-scroll to the current step:** `initialScrollIndex` is unreliable without fixed row heights. It can come back if needed.
 
 ---
 
